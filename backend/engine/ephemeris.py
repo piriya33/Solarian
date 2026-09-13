@@ -10,15 +10,39 @@ from typing import Dict, List, Any, Tuple, Optional
 from datetime import datetime, date, time, timedelta, timezone
 import swisseph as swe
 
-# Configure Ephemeris data path
+# Configure Ephemeris data path with robust discovery
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", ".."))
-EPHE_PATH = os.path.join(PROJECT_ROOT, "ephe")
+POSSIBLE_EPHE_PATHS = [
+    os.environ.get("EPHE_PATH"),
+    os.path.abspath(os.path.join(CURRENT_DIR, "..", "..", "ephe")),
+    os.path.abspath(os.path.join(CURRENT_DIR, "..", "ephe")),
+    "/app/ephe",
+    "./ephe",
+    os.path.join(os.getcwd(), "ephe"),
+    "/usr/share/swisseph",
+    "/usr/local/share/swisseph"
+]
 
-if os.path.exists(EPHE_PATH):
-    swe.set_ephe_path(EPHE_PATH)
+ACTIVE_EPHE_PATH = None
+for p in POSSIBLE_EPHE_PATHS:
+    if p and os.path.exists(p) and os.path.isdir(p):
+        ACTIVE_EPHE_PATH = p
+        break
+
+if ACTIVE_EPHE_PATH:
+    swe.set_ephe_path(ACTIVE_EPHE_PATH)
+    print(f"[Solarian] Swiss Ephemeris loaded from: {ACTIVE_EPHE_PATH}")
 else:
-    swe.set_ephe_path("/usr/share/swisseph:/usr/local/share/swisseph")
+    swe.set_ephe_path("/app/ephe:/usr/share/swisseph:./ephe")
+    print("[Solarian] Swiss Ephemeris fallback path configured")
+
+def ensure_ephe_configured():
+    """Ensures ephe path is re-verified at request or startup time."""
+    for p in POSSIBLE_EPHE_PATHS:
+        if p and os.path.exists(p) and os.path.isdir(p):
+            swe.set_ephe_path(p)
+            return p
+    return None
 
 ZODIAC_SIGNS = [
     {"name": "Aries", "thai": "ราศีเมษ", "symbol": "♈", "element": "Fire", "modality": "Cardinal", "ruler": "Mars"},
@@ -243,21 +267,34 @@ def calculate_chart(
             "declination_str": format_coord_dms(dec, is_lat=True)
         })
 
+    # Ensure ephemeris paths are active
+    ensure_ephe_configured()
+
     # 5. Planetary Positions
     planets_data = []
     planets_dict = {}
 
     for p_def in PLANET_DEFS:
         p_id = p_def["id"]
-        res, flags = swe.calc_ut(tjd_ut, p_id)
+        try:
+            res, flags = swe.calc_ut(tjd_ut, p_id)
+            res_eq, _ = swe.calc_ut(tjd_ut, p_id, swe.FLG_EQUATORIAL)
+        except swe.Error as e:
+            # Fallback to Moshier analytical ephemeris for planetary bodies, or skip optional asteroid
+            try:
+                res, flags = swe.calc_ut(tjd_ut, p_id, swe.FLG_MOSEPH | swe.FLG_SPEED)
+                res_eq, _ = swe.calc_ut(tjd_ut, p_id, swe.FLG_MOSEPH | swe.FLG_EQUATORIAL)
+            except Exception:
+                # If an asteroid (like Chiron) requires external file not yet synced, skip gracefully
+                print(f"[Solarian] Warning: unable to compute body {p_def['name']}: {e}")
+                continue
+
         lon_p, lat_p, dist_p, speed_lon, speed_lat, speed_dist = res
 
         sign_idx = int((lon_p % 360.0) / 30.0)
         d, m, s = deg_to_dms(lon_p)
         house_num = get_house_for_lon(lon_p, house_cusps)
 
-        # Declination directly from equatorial position or conversion
-        res_eq, _ = swe.calc_ut(tjd_ut, p_id, swe.FLG_EQUATORIAL)
         dec_p = res_eq[1]
 
         p_obj = {

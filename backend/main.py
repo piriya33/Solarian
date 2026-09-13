@@ -26,7 +26,7 @@ from backend.auth import (
     get_optional_user
 )
 
-from backend.engine.ephemeris import calculate_chart
+from backend.engine.ephemeris import calculate_chart, ensure_ephe_configured
 from backend.engine.thaksa import determine_astrological_day, calculate_thaksa_matrix, calculate_108_timeline
 from backend.engine.transits import build_108_transits_map
 from backend.engine.interpretation import (
@@ -57,6 +57,8 @@ app = FastAPI(
 def on_startup():
     Base.metadata.create_all(bind=engine)
     ensure_db_schema()
+    configured_path = ensure_ephe_configured()
+    print(f"[Solarian Startup] Ephemeris path initialized: {configured_path}")
 
 
 app.add_middleware(
