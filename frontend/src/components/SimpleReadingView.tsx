@@ -14,6 +14,10 @@ import {
   FileText,
   Sliders,
   CheckCircle2,
+  Calendar,
+  Clock,
+  MapPin,
+  Target,
 } from "lucide-react";
 
 interface SimpleReadingViewProps {
@@ -103,14 +107,17 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
           </p>
 
           <div className="mt-6 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <span className="bg-white/80 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 font-medium">
-              📅 เกิดวันที่ {chart.metadata.birth_date}
+            <span className="inline-flex items-center gap-1.5 bg-white/80 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 font-medium">
+              <Calendar className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>เกิดวันที่ {chart.metadata.birth_date}</span>
             </span>
-            <span className="bg-white/80 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 font-medium">
-              ⏰ เวลา {chart.metadata.birth_time} น.
+            <span className="inline-flex items-center gap-1.5 bg-white/80 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 font-medium">
+              <Clock className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+              <span>เวลา {chart.metadata.birth_time} น.</span>
             </span>
-            <span className="bg-white/80 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 font-medium">
-              📍 {chart.angles.Ascendant.sign_thai} (ลัคนา)
+            <span className="inline-flex items-center gap-1.5 bg-white/80 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 font-medium">
+              <MapPin className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+              <span>{chart.angles.Ascendant.sign_thai} (ลัคนา)</span>
             </span>
           </div>
         </div>
@@ -285,8 +292,9 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
                   "พลังงานประจำปีช่วยกระตุ้นการเจรจา การสร้างเครือข่าย และการเปิดรับโอกาสใหม่ๆ ที่เข้ามาอย่างรวดเร็ว"}
               </p>
               {subDetail?.window_opportunity && (
-                <div className="mt-3 pt-3 border-t border-sky-200/60 dark:border-sky-800/40 text-xs text-sky-800 dark:text-sky-300 font-medium">
-                  🎯 <b>จังหวะทอง:</b> {subDetail.window_opportunity}
+                <div className="mt-3 pt-3 border-t border-sky-200/60 dark:border-sky-800/40 text-xs text-sky-800 dark:text-sky-300 font-medium flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
+                  <span><b>จังหวะทอง:</b> {subDetail.window_opportunity}</span>
                 </div>
               )}
             </div>
@@ -450,7 +458,8 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
                 onClick={onSwitchToBazi}
                 className="px-5 py-2.5 rounded-2xl bg-emerald-950/70 hover:bg-emerald-900/70 border border-emerald-700/60 text-emerald-300 font-semibold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-all shadow-sm"
               >
-                <span>☯️ ปาจื่อ 4 เสาชะตา (Bazi)</span>
+                <Compass className="w-3.5 h-3.5 text-emerald-400" />
+                <span>ปาจื่อ 4 เสาชะตา (Bazi)</span>
               </button>
             )}
 

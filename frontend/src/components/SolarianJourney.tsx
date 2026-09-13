@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowLeft,
   ArrowRight,
-  BookOpen,
   CalendarDays,
   ChevronDown,
   CircleAlert,
@@ -16,17 +15,19 @@ import {
   Save,
   Sparkles,
   Sun,
-  Trash2,
   X,
 } from "lucide-react";
-import type { ApiResponse, AspectData, BirthProfile, GuidancePeriodKey, MajorPeriod, PracticalGuidance, SynastryResult, YearEntry } from "../types";
+import type { ApiResponse, AspectData, BirthProfile, GuidancePeriodKey, MajorPeriod, PracticalGuidance, SynastryResult, User, YearEntry } from "../types";
 import { AspectGrid } from "./AspectGrid";
 import { BaziCard } from "./BaziCard";
 import { NatalWheel } from "./NatalWheel";
 import { PlanetTable } from "./PlanetTable";
+import { SimpleReadingView } from "./SimpleReadingView";
+import { AICounselorView } from "./AICounselorView";
+import { AIPaywallModal } from "./AIPaywallModal";
 
 type City = { city: string; lat: number; lon: number; tz: number };
-type Page = "plan" | "bazi" | "connections" | "journal" | "advanced";
+type Page = "reading" | "pro" | "bazi" | "connections" | "ai";
 type Focus = "career" | "money" | "investment";
 
 const guidanceTabLabels: Record<GuidancePeriodKey, string> = {
@@ -46,66 +47,8 @@ type BirthParams = {
   location_name: string;
 };
 
-type AccountUser = {
-  id: number;
-  email: string;
-  role?: string;
+type AccountUser = User & {
   profile?: Partial<BirthParams> | null;
-};
-
-type JournalEntry = {
-  id: string;
-  createdAt: string;
-  note: string;
-  focus: Focus;
-  profileName: string;
-  birthDate: string;
-  selectedAge: number;
-  calendarYear: number;
-  majorRuler?: string;
-  subRuler?: string;
-  annualRuler?: string;
-  sunPosition: string;
-  guidanceView?: GuidancePeriodKey;
-  guidanceReferenceDate?: string;
-  guidanceTimeScope?: string;
-  guidanceScope?: string;
-  harmonicMethod?: "solar-modulo-30-v1";
-  harmonicTriggers?: Array<{
-    planetName: string;
-    planetThai: string;
-    exactAge: number;
-    cycleNum: number;
-  }>;
-};
-
-const STORAGE_KEY = "solarian_planning_journal_v2";
-const focusLabels: Record<Focus, string> = {
-  career: "การงาน",
-  money: "การเงิน",
-  investment: "การลงทุน",
-};
-
-const planningPrompts: Record<Focus, { question: string; check: string }> = {
-  career: {
-    question: "บทบาทหรือทักษะใดควรได้รับเวลา และจะดูความคืบหน้าจากอะไร",
-    check: "จดงานทดลองหนึ่งชิ้น ผู้เกี่ยวข้อง และวันที่จะกลับมาทบทวน",
-  },
-  money: {
-    question: "เป้าหมายนี้ต้องใช้ข้อมูลรายรับ ภาระ และระยะเวลาอะไรเพิ่มเติม",
-    check: "แยกตัวเลขที่รู้แล้วออกจากสมมติฐานที่ยังต้องตรวจ",
-  },
-  investment: {
-    question: "สมมติฐานใดสนับสนุนมุมมองนี้ และข้อมูลอะไรจะทำให้คุณเปลี่ยนใจ",
-    check: "ตรวจข้อมูลธุรกิจ ราคา สภาพคล่อง และความเสี่ยงจากแหล่งข้อมูลจริงก่อนตัดสินใจ",
-  },
-};
-
-const planningScopeLead: Record<GuidancePeriodKey, string> = {
-  today: "วันนี้",
-  period: "ในช่วงนี้",
-  year: "ในปีนี้",
-  identity: "เมื่อมองจากตัวตนของคุณ",
 };
 
 function bangkokTodayISO() {
@@ -134,15 +77,6 @@ function formatThaiDate(value: string) {
     dateStyle: "medium",
     timeZone: "UTC",
   }).format(new Date(`${value}T12:00:00Z`));
-}
-
-function readJournal(): JournalEntry[] {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }
 
 function otherAspectBody(aspect: AspectData) {
@@ -242,7 +176,7 @@ function ArtTile({ atlas, index, className }: { atlas: "planet" | "zodiac"; inde
   />;
 }
 
-function readRoute() {
+function readRoute(): { page: Page; age: number | null; focus: Focus } {
   const query = new URLSearchParams(window.location.search);
   const view = query.get("view");
   const ageValue = query.get("age");
@@ -250,8 +184,16 @@ function readRoute() {
   const age = ageValue !== null && /^\d{1,3}$/.test(ageValue) && Number(ageValue) <= 108
     ? Number(ageValue)
     : null;
+
+  let page: Page = "reading";
+  if (view === "pro" || view === "advanced") page = "pro";
+  else if (view === "bazi") page = "bazi";
+  else if (view === "connections") page = "connections";
+  else if (view === "ai") page = "ai";
+  else page = "reading";
+
   return {
-    page: (["plan", "bazi", "connections", "journal", "advanced"] as Page[]).includes(view as Page) ? view as Page : "plan" as Page,
+    page,
     age,
     focus: (["career", "money", "investment"] as Focus[]).includes(focusValue as Focus) ? focusValue as Focus : "career" as Focus,
   };
@@ -259,7 +201,7 @@ function readRoute() {
 
 function writeRoute(route: { page: Page; age: number; focus: Focus }, mode: "push" | "replace" = "replace") {
   const url = new URL(window.location.href);
-  if (route.page === "plan") url.searchParams.delete("view");
+  if (route.page === "reading") url.searchParams.delete("view");
   else url.searchParams.set("view", route.page);
   url.searchParams.set("age", String(route.age));
   if (route.focus === "career") url.searchParams.delete("focus");
@@ -341,7 +283,7 @@ function AccountDialog({
       </button>
       <p className="sj-kicker">บัญชีและโปรไฟล์</p>
       <h2 id="account-title">{mode === "login" ? "กลับมาอ่านแผนเดิม" : "สร้างพื้นที่ส่วนตัว"}</h2>
-      <p className="sj-muted">บัญชีใช้สำหรับเก็บโปรไฟล์เกิดบนระบบ ส่วนสมุดแผนในหน้านี้ยังอยู่ในเบราว์เซอร์เครื่องนี้</p>
+      <p className="sj-muted">บัญชีใช้สำหรับบันทึกและจัดการโปรไฟล์ดวงชะตาของคุณอย่างปลอดภัยบนระบบ</p>
       <div className="sj-segment" role="group" aria-label="เลือกรูปแบบบัญชี">
         <button type="button" aria-pressed={mode === "login"} onClick={() => { setMode("login"); setError(""); }}>เข้าสู่ระบบ</button>
         <button type="button" aria-pressed={mode === "register"} onClick={() => { setMode("register"); setError(""); }}>สร้างบัญชี</button>
@@ -469,7 +411,7 @@ function BirthSetup({
         {citiesError && <p className="sj-alert sj-grid-wide" role="alert"><CircleAlert aria-hidden="true" />{citiesError}</p>}
         {formError && <p className="sj-alert sj-grid-wide" role="alert"><CircleAlert aria-hidden="true" />{formError}</p>}
         <button className="sj-button sj-primary sj-submit" disabled={loading}>
-          {loading ? <><RotateCcw className="sj-spin" aria-hidden="true" />กำลังคำนวณ</> : <><Sparkles aria-hidden="true" />คำนวณและเปิดแผนชีวิต</>}
+          {loading ? <><RotateCcw className="sj-spin" aria-hidden="true" />กำลังคำนวณ</> : <><Sparkles aria-hidden="true" />คำนวณดวงชะตา</>}
         </button>
       </form>
     </section>
@@ -583,7 +525,7 @@ function ConnectionsPage({
 
   const runSynastry = async (p2Data?: BirthParams) => {
     if (!person1Params) {
-      setError("กรุณากรอกและคำนวณดวงชะตาแรกในหน้า 'แผนชีวิต' ก่อนเปรียบเทียบ");
+      setError("กรุณากรอกและคำนวณดวงชะตาแรกในหน้า 'ดวงชะตา' ก่อนเปรียบเทียบ");
       return;
     }
     setLoading(true);
@@ -638,7 +580,7 @@ function ConnectionsPage({
           <CircleAlert aria-hidden="true" />
           <div>
             <h3>ยังไม่มีข้อมูลดวงชะตาหลัก</h3>
-            <p>กรุณากลับไปที่หน้า “แผนชีวิต” เพื่อคำนวณดวงของท่านก่อนเปิดการเปรียบเทียบความสัมพันธ์</p>
+            <p>กรุณากลับไปที่หน้า “ดวงชะตา” เพื่อคำนวณดวงของท่านก่อนเปิดการเปรียบเทียบความสัมพันธ์</p>
           </div>
         </div>
       ) : (
@@ -808,13 +750,11 @@ export function SolarianJourney() {
   const [status, setStatus] = useState("");
   const [selectedAge, setSelectedAge] = useState(initialRoute.age ?? 0);
   const [focus, setFocus] = useState<Focus>(initialRoute.focus);
-  const [note, setNote] = useState("");
-  const [journal, setJournal] = useState<JournalEntry[]>(readJournal);
-  const [deleted, setDeleted] = useState<{ entry: JournalEntry; index: number } | null>(null);
   const [currentUser, setCurrentUser] = useState<AccountUser | null>(null);
   const [profiles, setProfiles] = useState<BirthProfile[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<number | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [selectedPlanet, setSelectedPlanet] = useState<string | null>(null);
   const [triggerFilter, setTriggerFilter] = useState("all");
@@ -825,14 +765,6 @@ export function SolarianJourney() {
   const currentParamsRef = useRef<BirthParams | null>(null);
   const authGenerationRef = useRef(0);
   const resultRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(journal));
-    } catch {
-      setError("เบราว์เซอร์ไม่อนุญาตให้บันทึกสมุดแผน กรุณาคัดลอกข้อความไว้ก่อนออกจากหน้านี้");
-    }
-  }, [journal]);
 
   useEffect(() => { currentParamsRef.current = currentParams; }, [currentParams]);
 
@@ -860,7 +792,6 @@ export function SolarianJourney() {
     setData(null);
     setCurrentParams(params);
     setActiveProfileId(profileId ?? null);
-    setNote("");
     setSelectedPlanet(null);
     setTriggerFilter("all");
     setGuidanceTab("today");
@@ -877,12 +808,12 @@ export function SolarianJourney() {
       const result = payload as ApiResponse;
       const route = readRoute();
       const resultAge = restoreRoute && route.age !== null ? route.age : calculateFullAge(params.birth_date);
-      const resultPage = restoreRoute ? route.page : "plan";
+      const resultPage: Page = restoreRoute ? route.page : "reading";
       setData(result);
       setSelectedAge(resultAge);
       setPage(resultPage);
       writeRoute({ page: resultPage, age: resultAge, focus: route.focus });
-      setStatus(`คำนวณแผนชีวิตของ ${result.profile.name} แล้ว`);
+      setStatus(`คำนวณดวงชะตาของ ${result.profile.name} แล้ว`);
       window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
     } catch (reason) {
       if (reason instanceof DOMException && reason.name === "AbortError") return;
@@ -960,17 +891,12 @@ export function SolarianJourney() {
     .filter((aspect) => aspect.body1 === "Sun" || aspect.body2 === "Sun")
     .sort((a, b) => a.orb - b.orb), [data]);
   const selectedYear: YearEntry | undefined = data?.timeline.years_map.find((entry) => entry.age === selectedAge);
-  const guidanceAge = data && currentParams
-    ? Math.max(0, Math.min(108, data.guidance?.periods?.year?.age ?? calculateFullAge(currentParams.birth_date, data.guidance?.reference_date)))
-    : 0;
-  const guidanceYear = data?.timeline.years_map.find((entry) => entry.age === guidanceAge);
   const selectedMajor = data?.timeline.major_periods.find((period) => period.start_age <= selectedAge && (selectedAge < period.end_age || (selectedAge === 108 && period.end_age === 108)));
   const selectedMajorLegend = selectedYear ? planetDeityLegends[selectedYear.major_planet.name] : undefined;
   const selectedSub = selectedMajor?.sub_periods.find((period) => period.start_age <= selectedAge && (selectedAge < period.end_age || (selectedAge === 108 && period.end_age === 108)));
   const selectedTransit = data?.transits_map.find((item) => item.age === selectedAge);
   const solarTransits = (selectedTransit?.active_aspects ?? []).filter((item: { natal_target?: string }) => item.natal_target === "Sun");
   const selectedDegreeHits = selectedYear?.degree_triggers ?? selectedYear?.reading?.degree_triggers ?? [];
-  const guidanceDegreeHits = guidanceYear?.degree_triggers ?? guidanceYear?.reading?.degree_triggers ?? [];
   const selectedDegreeDetails = selectedYear?.reading?.degree_trigger_details?.length
     ? selectedYear.reading.degree_trigger_details
     : selectedYear?.reading?.degree_trigger_detail
@@ -994,11 +920,6 @@ export function SolarianJourney() {
     setSelectedAge(nextAge);
     setTriggerFilter("all");
     writeRoute({ page, age: nextAge, focus });
-  }
-
-  function selectFocus(nextFocus: Focus) {
-    setFocus(nextFocus);
-    writeRoute({ page, age: selectedAge, focus: nextFocus });
   }
 
   async function exportPdf() {
@@ -1081,59 +1002,6 @@ export function SolarianJourney() {
     await persistProfile({ ...currentParams }, token, authGenerationRef.current);
   }
 
-  function saveJournalEntry(event: React.FormEvent) {
-    event.preventDefault();
-    if (!data || !currentParams || !guidanceYear || !sun || !note.trim()) return;
-    const cardContext = data.guidance?.periods?.[guidanceTab]?.context;
-    const isYearView = guidanceTab === "year";
-    const entry: JournalEntry = {
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      note: note.trim(),
-      focus,
-      profileName: data.profile.name,
-      birthDate: currentParams.birth_date,
-      selectedAge: guidanceAge,
-      calendarYear: guidanceYear.calendar_year,
-      majorRuler: guidanceTab === "period" ? cardContext?.major_planet?.thai : isYearView ? cardContext?.major_planet?.thai || guidanceYear.major_planet.thai : undefined,
-      subRuler: isYearView ? cardContext?.sub_planet?.thai || guidanceYear.sub_planet.thai : undefined,
-      annualRuler: isYearView ? cardContext?.annual_planet?.thai || guidanceYear.annual_thaksa.thai : undefined,
-      sunPosition: `${sun.sign_thai} ${sun.formatted_dms} เรือน ${sun.house}`,
-      guidanceView: data.guidance ? guidanceTab : undefined,
-      guidanceReferenceDate: data.guidance?.reference_date,
-      guidanceTimeScope: data.guidance?.periods?.[guidanceTab]?.time_scope || data.guidance?.time_scope,
-      guidanceScope: guidanceTab === "period" && data.guidance?.periods?.period?.start_date && data.guidance?.periods?.period?.end_date
-        ? `${formatThaiDate(data.guidance.periods.period.start_date)} – ${formatThaiDate(data.guidance.periods.period.end_date)}`
-        : guidanceTab === "year" ? data.guidance?.periods?.year?.date_label : undefined,
-      harmonicMethod: guidanceTab === "year" ? "solar-modulo-30-v1" : undefined,
-      harmonicTriggers: guidanceTab === "year" ? guidanceDegreeHits.map((hit) => ({
-        planetName: hit.planet_name,
-        planetThai: hit.planet_thai,
-        exactAge: hit.exact_age,
-        cycleNum: hit.cycle_num,
-      })) : undefined,
-    };
-    setJournal((items) => [entry, ...items]);
-    setNote("");
-    setStatus(`บันทึกแผนมุมมอง “${guidanceTabLabels[guidanceTab]}” แล้ว`);
-  }
-
-  function removeJournal(index: number) {
-    const entry = journal[index];
-    setJournal((items) => items.filter((_, itemIndex) => itemIndex !== index));
-    setDeleted({ entry, index });
-  }
-
-  function undoDelete() {
-    if (!deleted) return;
-    setJournal((items) => {
-      const next = [...items];
-      next.splice(Math.min(deleted.index, next.length), 0, deleted.entry);
-      return next;
-    });
-    setDeleted(null);
-  }
-
   function logout() {
     authGenerationRef.current += 1;
     requestRef.current?.controller.abort();
@@ -1153,155 +1021,318 @@ export function SolarianJourney() {
     <div className="sj-app">
       <a className="sj-skip" href="#main">ข้ามไปเนื้อหาหลัก</a>
       <header className="sj-header">
-        <button className="sj-brand" onClick={() => changePage("plan")} aria-label="สุริยวิถี หน้าแผนชีวิต">
+        <button className="sj-brand" onClick={() => changePage("reading")} aria-label="สุริยวิถี หน้าดวงชะตา">
           <Sun aria-hidden="true" /><span>สุริยวิถี<small>SOLAR ATLAS</small></span>
         </button>
         <nav aria-label="เมนูหลัก">
-          <button aria-current={page === "plan" ? "page" : undefined} onClick={() => changePage("plan")}>แผนชีวิต</button>
+          <button aria-current={page === "reading" ? "page" : undefined} onClick={() => changePage("reading")}>ดวงชะตา</button>
+          <button aria-current={page === "pro" ? "page" : undefined} onClick={() => changePage("pro")}>วิเคราะห์เชิงลึก</button>
           <button aria-current={page === "bazi" ? "page" : undefined} onClick={() => changePage("bazi")}>ปาจื่อ (4 เสา)</button>
           <button aria-current={page === "connections" ? "page" : undefined} onClick={() => changePage("connections")}>ผู้ร่วมทาง</button>
-          <button aria-current={page === "journal" ? "page" : undefined} onClick={() => changePage("journal")}>สมุดแผน</button>
-          <button aria-current={page === "advanced" ? "page" : undefined} onClick={() => changePage("advanced")}>ข้อมูลดวง</button>
+          <button aria-current={page === "ai" ? "page" : undefined} onClick={() => changePage("ai")}>AI ปรึกษาดวง</button>
         </nav>
         <div className="sj-account-actions">
-          {currentUser ? <><span className="sj-account-name">{currentUser.email}</span><button className="sj-icon-button" onClick={logout} aria-label="ออกจากระบบ"><LogOut aria-hidden="true" /></button></> : <button className="sj-button sj-soft" onClick={() => setAccountOpen(true)}><LogIn aria-hidden="true" />บัญชี</button>}
+          {currentUser ? (
+            <>
+              <span className="sj-account-name">{currentUser.email}</span>
+              <button className="sj-icon-button" onClick={logout} aria-label="ออกจากระบบ">
+                <LogOut aria-hidden="true" />
+              </button>
+            </>
+          ) : (
+            <button className="sj-button sj-soft" onClick={() => setAccountOpen(true)}>
+              <LogIn aria-hidden="true" />บัญชี
+            </button>
+          )}
         </div>
       </header>
 
       <p className="sj-live" role="status" aria-live="polite">{status}</p>
-      {error && <div className="sj-global-alert" role="alert"><CircleAlert aria-hidden="true" /><span>{error}</span><button onClick={() => setError("")} aria-label="ปิดข้อความผิดพลาด"><X aria-hidden="true" /></button></div>}
-
-      {page === "bazi" && (
-        <main className="sj-page sj-narrow" id="main" tabIndex={-1}>
-          <div className="sj-section-heading">
-            <div>
-              <p className="sj-kicker">ระบบสี่เสาชะตาชีวิต (Four Pillars of Destiny)</p>
-              <h1>พิมพ์เขียวห้าธาตุและปาจื่อ</h1>
-            </div>
-            {data?.profile && <span className="sj-status">{data.profile.name}</span>}
-          </div>
-          {data?.bazi ? (
-            <BaziCard bazi={data.bazi} currentAge={selectedAge} />
-          ) : (
-            <div className="sj-guidance-unavailable" role="status">
-              <CircleAlert aria-hidden="true" />
-              <div>
-                <h3>ยังไม่มีข้อมูลปาจื่อ</h3>
-                <p>กรุณากลับไปที่หน้า “แผนชีวิต” เพื่อคำนวณดวงชะตาก่อนเปิดดูพิมพ์เขียวปาจื่อ</p>
-              </div>
-            </div>
-          )}
-        </main>
+      {error && (
+        <div className="sj-global-alert" role="alert">
+          <CircleAlert aria-hidden="true" />
+          <span>{error}</span>
+          <button onClick={() => setError("")} aria-label="ปิดข้อความผิดพลาด"><X aria-hidden="true" /></button>
+        </div>
       )}
 
-      {page === "connections" && (
-        <ConnectionsPage
-          person1Params={currentParams}
-          profiles={profiles}
-          cities={cities}
-        />
-      )}
-
-      {page === "journal" && (
-        <main className="sj-page sj-narrow" id="main" tabIndex={-1}>
-          <p className="sj-kicker">ข้อมูลอยู่ในเบราว์เซอร์เครื่องนี้</p><h1>สมุดแผนของฉัน</h1>
-          <p className="sj-lead">แต่ละบันทึกเก็บชื่อโปรไฟล์ อายุ ปี และข้อมูลแกนดวงอาทิตย์ที่ใช้เป็นบริบท ไม่มีการส่งบันทึกนี้ไปยัง AI</p>
-          {journal.length ? <div className="sj-journal-list">{journal.map((entry, index) => (
-            <article className="sj-raised sj-journal-entry" key={entry.id}>
-              <div><span className="sj-status">{entry.profileName} · อายุ {entry.selectedAge} ปี · ค.ศ. {entry.calendarYear}</span><h2>{entry.note}</h2>{entry.guidanceView && <p className="sj-journal-guidance">มุมมอง “{guidanceTabLabels[entry.guidanceView]}”{entry.guidanceReferenceDate ? ` · อ้างอิง ${formatThaiDate(entry.guidanceReferenceDate)}` : ""}{entry.guidanceScope ? ` · ${entry.guidanceScope}` : ""}</p>}<p>{focusLabels[entry.focus]} · อาทิตย์ {entry.sunPosition}</p><small>{[entry.majorRuler ? `ดาวเสวยอายุ ${entry.majorRuler}` : "", entry.subRuler ? `ดาวแทรก ${entry.subRuler}` : "", entry.annualRuler ? `ทักษาจร ${entry.annualRuler}` : ""].filter(Boolean).join(" · ")}{entry.majorRuler || entry.subRuler || entry.annualRuler ? " · " : ""}บันทึก {formatThaiDate(entry.createdAt.slice(0, 10))}</small>{entry.harmonicMethod && <p className="sj-journal-harmonic">ฐาน 30°: {entry.harmonicTriggers?.length ? entry.harmonicTriggers.map((hit) => `ดาว${hit.planetThai} ${hit.exactAge.toFixed(2)} ปี`).join(" · ") : "ไม่มีจุดกระตุ้นในช่องอายุนี้"}</p>}</div>
-              <button className="sj-icon-button" onClick={() => removeJournal(index)} aria-label={`ลบบันทึก ${entry.note}`}><Trash2 aria-hidden="true" /></button>
-            </article>
-          ))}</div> : <div className="sj-empty sj-raised"><BookOpen aria-hidden="true" /><h2>ยังไม่มีบันทึก</h2><p>เลือกปีในแผนชีวิต แล้วจดสิ่งที่จะทำหรือข้อมูลที่ต้องตรวจสอบ</p><button className="sj-button sj-primary" onClick={() => changePage("plan")}>เปิดแผนชีวิต</button></div>}
-        </main>
-      )}
-
-      {page === "advanced" && (
-        <main className="sj-page" id="main" tabIndex={-1}>
-          <div className="sj-section-heading"><div><p className="sj-kicker">ข้อมูลสำหรับตรวจสอบเชิงลึก</p><h1>ดวงกำเนิดและรายละเอียดทางเทคนิค</h1></div>{data && <button className="sj-button sj-soft" onClick={exportPdf} disabled={exporting}><Download aria-hidden="true" />{exporting ? "กำลังสร้าง PDF…" : "ดาวน์โหลด PDF"}</button>}</div>
-          {data ? <div className="sj-legacy-tools">
-            <NatalWheel chart={data.chart} selectedPlanet={selectedPlanet} onSelectPlanet={setSelectedPlanet} theme="light" />
-            <AspectGrid chart={data.chart} aspectDynamics={data.aspect_dynamics} selectedPlanet={selectedPlanet} onSelectPlanet={setSelectedPlanet} />
-            <PlanetTable chart={data.chart} selectedPlanet={selectedPlanet} onSelectPlanet={setSelectedPlanet} />
-          </div> : <div className="sj-empty sj-raised"><FileClock aria-hidden="true" /><h2>คำนวณโปรไฟล์ก่อนเปิดข้อมูลดวง</h2><button className="sj-button sj-primary" onClick={() => changePage("plan")}>ไปที่ข้อมูลเกิด</button></div>}
-        </main>
-      )}
-
-      {page === "plan" && (
+      {/* 1. ดวงชะตา (Reading View) */}
+      {page === "reading" && (
         <main id="main" tabIndex={-1}>
           {!data && (
             <>
               <section className="sj-hero">
-                <div className="sj-hero-copy"><p className="sj-kicker">มองชีวิตให้ไกล เลือกก้าวต่อไปให้ชัดขึ้น</p><h1>อ่านภาพใหญ่<br />แล้วกลับมาวางแผน<br /><em>ปีที่อยู่ตรงหน้า</em></h1><p>คำนวณดวงกำเนิดและวงรอบ 108 ปีจากข้อมูลที่คุณยืนยัน เริ่มจากแกนอาทิตย์และเก็บข้อสังเกตไว้ทบทวนกับข้อมูลจริง</p><a className="sj-button sj-primary" href="#birth-setup"><Sparkles aria-hidden="true" />เริ่มสร้างแผนชีวิต</a><small>โหราศาสตร์เป็นกรอบสำหรับการทบทวน ไม่รับประกันเหตุการณ์หรือผลตอบแทนจากการลงทุน</small></div>
-                <figure className="sj-hero-art"><img src="/assets/phiphek-material.png" width="1254" height="1254" alt="ภาพพิเภกถือดวงอาทิตย์และอ่านแผนที่ฟ้า สื่อถึงการให้คำปรึกษาจากภาพใหญ่" /><figcaption>มองสัญญาณ · ตรวจเหตุผล · วางก้าวถัดไป</figcaption></figure>
+                <div className="sj-hero-copy">
+                  <p className="sj-kicker">โหราศาสตร์ตะวันตก ผสานมหาทักษาและปาจื่อ</p>
+                  <h1>สุริยวิถี<br />เจาะลึกพิมพ์เขียวชีวิต<br /><em>จากภาพใหญ่สู่การลงมือจริง</em></h1>
+                  <p>คำนวณตำแหน่งดวงดาวแม่นยำระดับฟิสิกส์ดาราศาสตร์ (DE431) สรุปทิศทางชีวิตประจำวัน พร้อมวิเคราะห์พื้นดวงและจังหวะชีวิต</p>
+                  <a className="sj-button sj-primary" href="#birth-setup"><Sparkles aria-hidden="true" />คำนวณดวงชะตา</a>
+                  <small>ระบบคำนวณตำแหน่งดาวจริงตามพิกัดเวลาเกิด พร้อมมหาทักษา 108 ปี และปาจื่อห้าธาตุ</small>
+                </div>
+                <figure className="sj-hero-art">
+                  <img src="/assets/phiphek-material.png" width="1254" height="1254" alt="ภาพพิเภกถือดวงอาทิตย์และอ่านแผนที่ฟ้า สื่อถึงการให้คำปรึกษาจากภาพใหญ่" />
+                  <figcaption>มองสัญญาณ · ตรวจเหตุผล · วางก้าวถัดไป</figcaption>
+                </figure>
               </section>
-              <div id="birth-setup" className="sj-page sj-setup-wrap"><BirthSetup cities={cities} citiesError={citiesError} initial={currentParams} loading={loading} onCalculate={calculate} /></div>
+              <div id="birth-setup" className="sj-page sj-setup-wrap">
+                <BirthSetup cities={cities} citiesError={citiesError} initial={currentParams} loading={loading} onCalculate={calculate} />
+              </div>
             </>
           )}
 
-          {data && currentParams && selectedYear && sun && (
-            <section className="sj-page sj-results" ref={resultRef} aria-labelledby="plan-title">
+          {data && currentParams && (
+            <section className="sj-page sj-results" ref={resultRef} aria-labelledby="reading-title">
+              {/* Profile Bar */}
               <div className="sj-profile-bar sj-raised">
-                <div><p className="sj-kicker">แผนชีวิตของ</p><h1 id="plan-title">{data.profile.name}</h1><p><MapPin aria-hidden="true" /> {data.profile.location_name} · {formatThaiDate(currentParams.birth_date)} เวลา {currentParams.birth_time} · UTC {currentParams.tz_offset >= 0 ? "+" : ""}{currentParams.tz_offset}</p></div>
+                <div>
+                  <p className="sj-kicker">ดวงชะตาของ</p>
+                  <h1 id="reading-title">{data.profile.name}</h1>
+                  <p>
+                    <MapPin aria-hidden="true" /> {data.profile.location_name} · {formatThaiDate(currentParams.birth_date)} เวลา {currentParams.birth_time} · UTC {currentParams.tz_offset >= 0 ? "+" : ""}{currentParams.tz_offset}
+                  </p>
+                </div>
                 <div className="sj-profile-actions">
-                  {profiles.length > 0 && <label>เลือกโปรไฟล์<select value={activeProfileId ?? ""} onChange={(event) => { const profile = profiles.find((item) => item.id === Number(event.target.value)); if (profile) selectProfile(profile); }}><option value="" disabled>เลือก</option>{profiles.map((profile) => <option key={profile.id} value={profile.id} disabled={profile.birth_data_complete === false}>{profile.name}{profile.is_default ? " · หลัก" : ""}{profile.birth_data_complete === false ? " · ข้อมูลไม่ครบ" : ""}</option>)}</select></label>}
-                  <button className="sj-button sj-soft" onClick={saveProfile} disabled={savingProfile}><Save aria-hidden="true" />{savingProfile ? "กำลังบันทึก…" : currentUser ? "บันทึกโปรไฟล์" : "บันทึกผ่านบัญชี"}</button>
-                  <button className="sj-button sj-quiet" onClick={() => { setData(null); setStatus(""); }}>แก้ข้อมูลเกิด</button>
+                  {profiles.length > 0 && (
+                    <label>
+                      เลือกโปรไฟล์
+                      <select
+                        value={activeProfileId ?? ""}
+                        onChange={(event) => {
+                          const profile = profiles.find((item) => item.id === Number(event.target.value));
+                          if (profile) selectProfile(profile);
+                        }}
+                      >
+                        <option value="" disabled>เลือก</option>
+                        {profiles.map((profile) => (
+                          <option key={profile.id} value={profile.id} disabled={profile.birth_data_complete === false}>
+                            {profile.name}{profile.is_default ? " · หลัก" : ""}{profile.birth_data_complete === false ? " · ข้อมูลไม่ครบ" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <button className="sj-button sj-soft" onClick={saveProfile} disabled={savingProfile}>
+                    <Save aria-hidden="true" />{savingProfile ? "กำลังบันทึก…" : currentUser ? "บันทึกโปรไฟล์" : "บันทึกผ่านบัญชี"}
+                  </button>
+                  <button className="sj-button sj-quiet" onClick={() => { setData(null); setStatus(""); }}>
+                    แก้ไขข้อมูลเกิด
+                  </button>
                 </div>
               </div>
 
+              {/* Daily Guidance Dashboard (ผลสรุปดวงประจำวัน) */}
               <GuidanceDashboard guidance={data.guidance} activeTab={guidanceTab} onTabChange={setGuidanceTab} />
 
+              {/* Core Natal Analysis (บทวิเคราะห์พื้นดวง) */}
+              <SimpleReadingView
+                data={data}
+                onSwitchToPro={() => changePage("pro")}
+                onSwitchToBazi={() => changePage("bazi")}
+                onSwitchToAi={() => changePage("ai")}
+                onExportPdf={exportPdf}
+                isExporting={exporting}
+              />
+            </section>
+          )}
+        </main>
+      )}
+
+      {/* 2. วิเคราะห์เชิงลึก (Pro Astrology Studio) */}
+      {page === "pro" && (
+        <main className="sj-page" id="main" tabIndex={-1}>
+          {!data ? (
+            <div className="sj-empty sj-raised">
+              <FileClock aria-hidden="true" />
+              <h2>กรุณาคำนวณดวงชะตาก่อนเปิดการวิเคราะห์เชิงลึก</h2>
+              <p>ใส่ข้อมูลวันเดือนปีเกิดและเวลาเกิดในหน้าดวงชะตา เพื่อเปิดระบบวิเคราะห์เต็มรูปแบบ</p>
+              <button className="sj-button sj-primary" onClick={() => changePage("reading")}>ไปที่หน้าดวงชะตา</button>
+            </div>
+          ) : currentParams && selectedYear && sun && (
+            <div className="sj-results" style={{ display: "grid", gap: "24px" }}>
+              {/* Pro Header with PDF Export */}
+              <div className="sj-section-heading">
+                <div>
+                  <p className="sj-kicker">สำหรับผู้ศึกษาโหราศาสตร์และวิเคราะห์ขั้นสูง</p>
+                  <h1>ห้องวิเคราะห์ดวงเชิงลึก (Pro Astrology Studio)</h1>
+                  <p style={{ color: "var(--sj-muted)", marginTop: "4px" }}>
+                    เจ้าชะตา: <strong>{data.profile.name}</strong> · ลัคนา {data.chart.angles.Ascendant.sign_thai} {data.chart.angles.Ascendant.formatted_dms} · อายุ {selectedAge} ปี
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <button className="sj-button sj-primary" onClick={exportPdf} disabled={exporting}>
+                    <Download aria-hidden="true" />{exporting ? "กำลังสร้าง PDF…" : "ดาวน์โหลด PDF รายงานเต็ม"}
+                  </button>
+                </div>
+              </div>
+
+              {/* 1. Placidus Natal Wheel */}
+              <section className="sj-raised" style={{ padding: "20px" }}>
+                <div className="sj-section-heading" style={{ marginBottom: "16px" }}>
+                  <div>
+                    <p className="sj-kicker">จักรราศีและเรือนชะตา (Placidus Natal Chart Wheel)</p>
+                    <h2>วงล้อดวงกำเนิด พลาซีดัส</h2>
+                  </div>
+                </div>
+                <NatalWheel chart={data.chart} selectedPlanet={selectedPlanet} onSelectPlanet={setSelectedPlanet} theme="dark" />
+              </section>
+
+              {/* 2. 108-Year Life Map & True Solar Arc 30° harmonic triggers */}
               <section className="sj-macro sj-raised" aria-labelledby="macro-title">
-                <div className="sj-section-heading"><div><p className="sj-kicker">01 · ภาพใหญ่ก่อนรายละเอียด</p><h2 id="macro-title">วงรอบชีวิต 108 ปี</h2></div><span className="sj-age-now">วันนี้อายุเต็ม {calculateFullAge(currentParams.birth_date)} ปี</span></div>
+                <div className="sj-section-heading">
+                  <div>
+                    <p className="sj-kicker">01 · ภาพใหญ่ก่อนรายละเอียด</p>
+                    <h2 id="macro-title">วงรอบชีวิต 108 ปี (มหาทักษา)</h2>
+                  </div>
+                  <span className="sj-age-now">วันนี้อายุเต็ม {calculateFullAge(currentParams.birth_date)} ปี</span>
+                </div>
                 <PeriodOverview periods={data.timeline.major_periods} selectedAge={selectedAge} onSelect={selectAge} />
                 <div className="sj-age-axis" aria-hidden="true"><span>0 ปี</span><span>54 ปี</span><span>108 ปี</span></div>
                 <div className="sj-year-explorer">
-                  <div className="sj-year-title"><div><p className="sj-kicker">สำรวจทีละ 1 ปี</p><h3>อายุ {selectedAge} ปี · ค.ศ. {selectedYear.calendar_year}</h3></div><button className="sj-button sj-quiet" onClick={() => selectAge(calculateFullAge(currentParams.birth_date))}><CalendarDays aria-hidden="true" />กลับสู่อายุปัจจุบัน</button></div>
+                  <div className="sj-year-title">
+                    <div>
+                      <p className="sj-kicker">สำรวจทีละ 1 ปี</p>
+                      <h3>อายุ {selectedAge} ปี · ค.ศ. {selectedYear.calendar_year}</h3>
+                    </div>
+                    <button className="sj-button sj-quiet" onClick={() => selectAge(calculateFullAge(currentParams.birth_date))}>
+                      <CalendarDays aria-hidden="true" />กลับสู่อายุปัจจุบัน
+                    </button>
+                  </div>
                   <label htmlFor="age-slider">เลื่อนดูอายุ 0–108 ปี</label>
-                  <input id="age-slider" className="sj-slider" type="range" min="0" max="108" step="1" value={selectedAge} aria-valuetext={`อายุ ${selectedAge} ปี ค.ศ. ${selectedYear.calendar_year}`} onChange={(event) => selectAge(Number(event.target.value))} />
+                  <input
+                    id="age-slider"
+                    className="sj-slider"
+                    type="range"
+                    min="0"
+                    max="108"
+                    step="1"
+                    value={selectedAge}
+                    aria-valuetext={`อายุ ${selectedAge} ปี ค.ศ. ${selectedYear.calendar_year}`}
+                    onChange={(event) => selectAge(Number(event.target.value))}
+                  />
                   <div className="sj-age-controls">
-                    <button className="sj-button sj-soft" disabled={selectedAge === 0} onClick={() => selectAge(selectedAge - 1)}><ArrowLeft aria-hidden="true" />ปีก่อน</button>
-                    <label><span>ไปที่อายุ</span><input aria-label="ไปที่อายุ 0 ถึง 108 ปี" type="number" min="0" max="108" step="1" value={selectedAge} onChange={(event) => { const value = Number(event.target.value); if (event.target.value !== "" && Number.isInteger(value) && value >= 0 && value <= 108) selectAge(value); }} /><span>ปี</span></label>
-                    <button className="sj-button sj-soft" disabled={selectedAge === 108} onClick={() => selectAge(selectedAge + 1)}>ปีถัดไป<ArrowRight aria-hidden="true" /></button>
+                    <button className="sj-button sj-soft" disabled={selectedAge === 0} onClick={() => selectAge(selectedAge - 1)}>
+                      <ArrowLeft aria-hidden="true" />ปีก่อน
+                    </button>
+                    <label>
+                      <span>ไปที่อายุ</span>
+                      <input
+                        aria-label="ไปที่อายุ 0 ถึง 108 ปี"
+                        type="number"
+                        min="0"
+                        max="108"
+                        step="1"
+                        value={selectedAge}
+                        onChange={(event) => {
+                          const value = Number(event.target.value);
+                          if (event.target.value !== "" && Number.isInteger(value) && value >= 0 && value <= 108) selectAge(value);
+                        }}
+                      />
+                      <span>ปี</span>
+                    </label>
+                    <button className="sj-button sj-soft" disabled={selectedAge === 108} onClick={() => selectAge(selectedAge + 1)}>
+                      ปีถัดไป<ArrowRight aria-hidden="true" />
+                    </button>
                   </div>
                   <div className="sj-ruler-grid" aria-live="polite">
-                    <article><span>ดาวเสวยอายุ · ภาพใหญ่</span><strong>{selectedYear.major_planet.symbol} ดาว{selectedYear.major_planet.thai}</strong><small>{selectedMajor ? `${formatThaiDate(selectedMajor.start_date)} – ${formatThaiDate(selectedMajor.end_date)}` : "—"}</small></article>
-                    <article><span>ดาวแทรก · ช่วงย่อย</span><strong>{selectedYear.sub_planet.symbol} ดาว{selectedYear.sub_planet.thai}</strong><small>{selectedSub ? `${formatThaiDate(selectedSub.start_date)} – ${formatThaiDate(selectedSub.end_date)}` : selectedYear.sub_duration_str}</small></article>
-                    <article><span>ทักษาจร · อายุย่าง {selectedYear.age_yang}</span><strong>{selectedYear.annual_thaksa.symbol} ดาว{selectedYear.annual_thaksa.thai}</strong><small>ปีตั้งต้น ค.ศ. {selectedYear.calendar_year}</small></article>
+                    <article>
+                      <span>ดาวเสวยอายุ · ภาพใหญ่</span>
+                      <strong>{selectedYear.major_planet.symbol} ดาว{selectedYear.major_planet.thai}</strong>
+                      <small>{selectedMajor ? `${formatThaiDate(selectedMajor.start_date)} – ${formatThaiDate(selectedMajor.end_date)}` : "—"}</small>
+                    </article>
+                    <article>
+                      <span>ดาวแทรก · ช่วงย่อย</span>
+                      <strong>{selectedYear.sub_planet.symbol} ดาว{selectedYear.sub_planet.thai}</strong>
+                      <small>{selectedSub ? `${formatThaiDate(selectedSub.start_date)} – ${formatThaiDate(selectedSub.end_date)}` : selectedYear.sub_duration_str}</small>
+                    </article>
+                    <article>
+                      <span>ทักษาจร · อายุย่าง {selectedYear.age_yang}</span>
+                      <strong>{selectedYear.annual_thaksa.symbol} ดาว{selectedYear.annual_thaksa.thai}</strong>
+                      <small>ปีตั้งต้น ค.ศ. {selectedYear.calendar_year}</small>
+                    </article>
                   </div>
                 </div>
               </section>
 
+              {/* Solar Core */}
               <section className="sj-solar sj-raised" aria-labelledby="solar-title">
-                <div className="sj-section-heading"><div><p className="sj-kicker">02 · THE SOLAR CORE</p><h2 id="solar-title">อาทิตย์เป็นแกน มุมสัมพันธ์เป็นบริบท</h2></div><span className="sj-source">ผลจากเครื่องคำนวณดวงกำเนิด</span></div>
+                <div className="sj-section-heading">
+                  <div>
+                    <p className="sj-kicker">02 · THE SOLAR CORE</p>
+                    <h2 id="solar-title">อาทิตย์เป็นแกน มุมสัมพันธ์เป็นบริบท</h2>
+                  </div>
+                  <span className="sj-source">ผลจากเครื่องคำนวณดวงกำเนิด</span>
+                </div>
                 <div className="sj-sun-layout">
-                  <article className="sj-sun-card"><ArtTile atlas="zodiac" index={zodiacArtIndex[sun.sign]} className="sj-zodiac-art" /><div><span>ดวงอาทิตย์กำเนิด</span><h3>{sun.sign_thai} · {sun.formatted_dms}</h3><p>เรือน {sun.house} · ลองจิจูด {sun.longitude.toFixed(4)}°</p><small className="sj-art-note">ภาพวาดตีความเชิงศิลป์</small></div></article>
-                  <div className="sj-aspect-list"><h3>มุมสัมพันธ์สู่อาทิตย์ทั้งหมด ({sunAspects.length})</h3>{sunAspects.length ? sunAspects.map((aspect, index) => { const other = otherAspectBody(aspect); return <article key={`${other.name}-${aspect.aspect_name}-${index}`}><span className="sj-aspect-symbol">{other.symbol || "•"}</span><div><strong>{bodyLabel(other)} {aspect.aspect_thai}</strong><p>{aspect.aspect_name} · orb {aspect.orb_str || `${aspect.orb.toFixed(2)}°`} · {aspect.is_applying ? "กำลังเข้าใกล้มุม" : "กำลังแยกจากมุม"}</p></div></article>; }) : <p className="sj-muted">ไม่พบมุมสัมพันธ์สู่อาทิตย์ภายในเกณฑ์ orb ของเครื่องคำนวณ</p>}</div>
+                  <article className="sj-sun-card">
+                    <ArtTile atlas="zodiac" index={zodiacArtIndex[sun.sign]} className="sj-zodiac-art" />
+                    <div>
+                      <span>ดวงอาทิตย์กำเนิด</span>
+                      <h3>{sun.sign_thai} · {sun.formatted_dms}</h3>
+                      <p>เรือน {sun.house} · ลองจิจูด {sun.longitude.toFixed(4)}°</p>
+                      <small className="sj-art-note">ภาพวาดตีความเชิงศิลป์</small>
+                    </div>
+                  </article>
+                  <div className="sj-aspect-list">
+                    <h3>มุมสัมพันธ์สู่อาทิตย์ทั้งหมด ({sunAspects.length})</h3>
+                    {sunAspects.length ? sunAspects.map((aspect, index) => {
+                      const other = otherAspectBody(aspect);
+                      return (
+                        <article key={`${other.name}-${aspect.aspect_name}-${index}`}>
+                          <span className="sj-aspect-symbol">{other.symbol || "•"}</span>
+                          <div>
+                            <strong>{bodyLabel(other)} {aspect.aspect_thai}</strong>
+                            <p>{aspect.aspect_name} · orb {aspect.orb_str || `${aspect.orb.toFixed(2)}°`} · {aspect.is_applying ? "กำลังเข้าใกล้มุม" : "กำลังแยกจากมุม"}</p>
+                          </div>
+                        </article>
+                      );
+                    }) : <p className="sj-muted">ไม่พบมุมสัมพันธ์สู่อาทิตย์ภายในเกณฑ์ orb ของเครื่องคำนวณ</p>}
+                  </div>
                 </div>
               </section>
 
+              {/* Harmonic 30° Triggers */}
               <section className="sj-harmonic sj-raised" aria-labelledby="harmonic-title">
                 <div className="sj-section-heading">
-                  <div><p className="sj-kicker">03 · ภาพใหญ่และจุดกระตุ้น</p><h2 id="harmonic-title">อ่านปีที่เลือกเป็นสองชั้น</h2></div>
-                  <span className="sj-source">วิถีองศาฐาน 30° เชิงสัญลักษณ์</span>
+                  <div>
+                    <p className="sj-kicker">03 · ภาพใหญ่และจุดกระตุ้น</p>
+                    <h2 id="harmonic-title">วิถีองศาดาวกระทบฐาน 30° และบริบทสองชั้น</h2>
+                  </div>
+                  <span className="sj-source">True Solar Arc + Harmonic 30°</span>
                 </div>
                 <div className="sj-harmonic-layers">
                   <article className="sj-harmonic-macro">
                     <div className="sj-layer-heading"><span>ชั้นที่ 1 · บริบทระยะยาว</span><strong>ภาพใหญ่</strong></div>
-                    <div className="sj-harmonic-ruler"><ArtTile atlas="planet" index={planetArtIndex[selectedYear.major_planet.name]} className="sj-planet-art" /><div><small>ดาวเสวยอายุ · {selectedYear.major_planet.symbol}</small><h3>ดาว{selectedYear.major_planet.thai}</h3><small className="sj-art-note">ภาพวาดตีความเชิงศิลป์</small></div></div>
-                    {selectedMajorLegend && <div className="sj-deity-facts">
-                      <p>ที่มาภาพตามเรื่องเล่าที่ใช้ในแอป</p>
-                      <dl>
-                        <div><dt>กำเนิดจาก</dt><dd>{selectedMajorLegend.origin}</dd></div>
-                        <div><dt>กำลังดาว</dt><dd>{selectedMajorLegend.power}</dd></div>
-                        <div><dt>สีประจำวัน</dt><dd><span className="sj-color-dot" style={{ backgroundColor: selectedMajorLegend.dayColorHex }} aria-hidden="true" />{selectedMajorLegend.dayColor}</dd></div>
-                        <div><dt>สีผ้าในตำนาน</dt><dd>{selectedMajorLegend.clothColor}</dd></div>
-                      </dl>
-                      <p className="sj-deity-reflection"><strong>กุศโลบาย: ข้อคิดชวนทบทวน (การตีความของแอป)</strong>{selectedMajorLegend.reflection}</p>
-                    </div>}
+                    <div className="sj-harmonic-ruler">
+                      <ArtTile atlas="planet" index={planetArtIndex[selectedYear.major_planet.name]} className="sj-planet-art" />
+                      <div>
+                        <small>ดาวเสวยอายุ · {selectedYear.major_planet.symbol}</small>
+                        <h3>ดาว{selectedYear.major_planet.thai}</h3>
+                        <small className="sj-art-note">ภาพวาดตีความเชิงศิลป์</small>
+                      </div>
+                    </div>
+                    {selectedMajorLegend && (
+                      <div className="sj-deity-facts">
+                        <p>ที่มาภาพตามเรื่องเล่าที่ใช้ในแอป</p>
+                        <dl>
+                          <div><dt>กำเนิดจาก</dt><dd>{selectedMajorLegend.origin}</dd></div>
+                          <div><dt>กำลังดาว</dt><dd>{selectedMajorLegend.power}</dd></div>
+                          <div><dt>สีประจำวัน</dt><dd><span className="sj-color-dot" style={{ backgroundColor: selectedMajorLegend.dayColorHex }} aria-hidden="true" />{selectedMajorLegend.dayColor}</dd></div>
+                          <div><dt>สีผ้าในตำนาน</dt><dd>{selectedMajorLegend.clothColor}</dd></div>
+                        </dl>
+                        <p className="sj-deity-reflection"><strong>กุศโลบาย: ข้อคิดชวนทบทวน (การตีความของแอป)</strong>{selectedMajorLegend.reflection}</p>
+                      </div>
+                    )}
                     <p>{cleanInterpretation(selectedYear.reading?.macro_detail?.epoch_title || `ดาว${selectedYear.major_planet.thai}เป็นบริบทใหญ่ของช่วงชีวิตที่กำลังดู`)}</p>
-                    <dl><div><dt>ช่วงอ้างอิง</dt><dd>{selectedMajor ? `${formatThaiDate(selectedMajor.start_date)} – ${formatThaiDate(selectedMajor.end_date)}` : "—"}</dd></div><div><dt>ปีที่กำลังดู</dt><dd>อายุ {selectedAge} ปี · ค.ศ. {selectedYear.calendar_year}</dd></div></dl>
-                    {selectedYear.reading?.macro_detail?.epoch_theme && <details className="sj-macro-context"><summary>ดูบริบทดาวเสวยอายุเพิ่มเติม <ChevronDown aria-hidden="true" /></summary><p>{cleanInterpretation(selectedYear.reading.macro_detail.epoch_theme)}</p></details>}
+                    <dl>
+                      <div><dt>ช่วงอ้างอิง</dt><dd>{selectedMajor ? `${formatThaiDate(selectedMajor.start_date)} – ${formatThaiDate(selectedMajor.end_date)}` : "—"}</dd></div>
+                      <div><dt>ปีที่กำลังดู</dt><dd>อายุ {selectedAge} ปี · ค.ศ. {selectedYear.calendar_year}</dd></div>
+                    </dl>
+                    {selectedYear.reading?.macro_detail?.epoch_theme && (
+                      <details className="sj-macro-context">
+                        <summary>ดูบริบทดาวเสวยอายุเพิ่มเติม <ChevronDown aria-hidden="true" /></summary>
+                        <p>{cleanInterpretation(selectedYear.reading.macro_detail.epoch_theme)}</p>
+                      </details>
+                    )}
                   </article>
 
                   <div className="sj-harmonic-micro">
@@ -1336,22 +1367,48 @@ export function SolarianJourney() {
                                     )}
                                   </div>
                                 </div>
-                                <p className="sj-trigger-age"><strong>อายุเชิงสัญลักษณ์ {formatExactTriggerAge(hit.exact_age)}</strong><span>คำนวณตามอัตราเร็วสุริยะจริง แสดงในช่องอายุ {selectedAge} ปีตามการปัดค่าของสูตร</span></p>
-                                {detail ? <div className="sj-trigger-reading">
-                                  <p>{cleanInterpretation(detail.trigger_narrative)}</p>
-                                  <dl><div><dt>ขอบเขตที่ใช้ทบทวน</dt><dd>{detail.house_name} · {detail.house_area}</dd></div><div><dt>บริบทคู่ดาว</dt><dd>{cleanInterpretation(detail.pair_type)} · {detail.dignity_label}</dd></div></dl>
-                                  {detail.sun_in_sign_degree != null && detail.planet_in_sign_degree != null && <details className="sj-trigger-source"><summary>ที่มาของค่า <ChevronDown aria-hidden="true" /></summary><p>อาทิตย์ {detail.sun_in_sign_degree.toFixed(2)}° → ดาว{detail.planet_thai} {detail.planet_in_sign_degree.toFixed(2)}° ภายในฐาน 30°{detail.natal_sign || detail.natal_degree ? ` · ดาวกำเนิดอยู่${detail.natal_sign ?? ""}${detail.natal_degree ? ` ${detail.natal_degree}` : ""}` : ""}</p></details>}
-                                  {detail.planning_question && <div className="sj-trigger-question"><span>คำถามวางแผน</span><strong>{cleanInterpretation(detail.planning_question)}</strong></div>}
-                                  {detail.practical_actions?.length ? <div className="sj-trigger-actions"><span>สิ่งที่นำไปทำต่อได้</span><ul>{detail.practical_actions.slice(0, 2).map((action, actionIndex) => <li key={`${hit.planet_name}-action-${actionIndex}`}>{cleanInterpretation(action)}</li>)}</ul></div> : null}
-                                  {detail.decision_check && <p className="sj-trigger-check"><strong>ก่อนตัดสินใจ:</strong> {cleanInterpretation(detail.decision_check)}</p>}
-                                </div> : <p className="sj-trigger-pending">มีค่าที่สูตรจัดไว้ในช่องอายุนี้ แต่เครื่องคำนวณรุ่นนี้ยังไม่ส่งรายละเอียดคำตีความของรายการนี้</p>}
+                                <p className="sj-trigger-age">
+                                  <strong>อายุเชิงสัญลักษณ์ {formatExactTriggerAge(hit.exact_age)}</strong>
+                                  <span>คำนวณตามอัตราเร็วสุริยะจริง แสดงในช่องอายุ {selectedAge} ปีตามการปัดค่าของสูตร</span>
+                                </p>
+                                {detail ? (
+                                  <div className="sj-trigger-reading">
+                                    <p>{cleanInterpretation(detail.trigger_narrative)}</p>
+                                    <dl>
+                                      <div><dt>ขอบเขตที่ใช้ทบทวน</dt><dd>{detail.house_name} · {detail.house_area}</dd></div>
+                                      <div><dt>บริบทคู่ดาว</dt><dd>{cleanInterpretation(detail.pair_type)} · {detail.dignity_label}</dd></div>
+                                    </dl>
+                                    {detail.sun_in_sign_degree != null && detail.planet_in_sign_degree != null && (
+                                      <details className="sj-trigger-source">
+                                        <summary>ที่มาของค่า <ChevronDown aria-hidden="true" /></summary>
+                                        <p>อาทิตย์ {detail.sun_in_sign_degree.toFixed(2)}° → ดาว{detail.planet_thai} {detail.planet_in_sign_degree.toFixed(2)}° ภายในฐาน 30°{detail.natal_sign || detail.natal_degree ? ` · ดาวกำเนิดอยู่${detail.natal_sign ?? ""}${detail.natal_degree ? ` ${detail.natal_degree}` : ""}` : ""}</p>
+                                      </details>
+                                    )}
+                                    {detail.planning_question && <div className="sj-trigger-question"><span>คำถามวางแผน</span><strong>{cleanInterpretation(detail.planning_question)}</strong></div>}
+                                    {detail.practical_actions?.length ? (
+                                      <div className="sj-trigger-actions">
+                                        <span>สิ่งที่นำไปทำต่อได้</span>
+                                        <ul>{detail.practical_actions.slice(0, 2).map((action, actionIndex) => <li key={`${hit.planet_name}-action-${actionIndex}`}>{cleanInterpretation(action)}</li>)}</ul>
+                                      </div>
+                                    ) : null}
+                                    {detail.decision_check && <p className="sj-trigger-check"><strong>ก่อนตัดสินใจ:</strong> {cleanInterpretation(detail.decision_check)}</p>}
+                                  </div>
+                                ) : (
+                                  <p className="sj-trigger-pending">มีค่าที่สูตรจัดไว้ในช่องอายุนี้ แต่เครื่องคำนวณรุ่นนี้ยังไม่ส่งรายละเอียดคำตีความของรายการนี้</p>
+                                )}
                               </article>
                             );
                           })}
                         </div>
                       </>
                     ) : (
-                      <div className="sj-no-trigger"><Compass aria-hidden="true" /><div><h3>ปีนี้ไม่มีจุดกระตุ้นฐาน 30°</h3><p>ไม่พบอายุเชิงสัญลักษณ์ที่ถูกจัดในช่องอายุ {selectedAge} ปีตามการปัดค่าของสูตร สถานะนี้ไม่ได้แปลว่าจะไม่มีเหตุการณ์สำคัญ และไม่เปลี่ยนบริบทจากดาวเสวยอายุด้านซ้าย</p></div></div>
+                      <div className="sj-no-trigger">
+                        <Compass aria-hidden="true" />
+                        <div>
+                          <h3>ปีนี้ไม่มีจุดกระตุ้นฐาน 30°</h3>
+                          <p>ไม่พบอายุเชิงสัญลักษณ์ที่ถูกจัดในช่องอายุ {selectedAge} ปีตามการปัดค่าของสูตร สถานะนี้ไม่ได้แปลว่าจะไม่มีเหตุการณ์สำคัญ และไม่เปลี่ยนบริบทจากดาวเสวยอายุด้านซ้าย</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1359,26 +1416,48 @@ export function SolarianJourney() {
                   <summary>ดูที่มาภาพดาวทั้ง 8 ตามเรื่องเล่าที่ใช้ในแอป <ChevronDown aria-hidden="true" /></summary>
                   <p className="sj-deity-legend-intro">ตามเรื่องเล่าที่ใช้ในแอป พระอิศวรทรงนำสัตว์หรือองค์ประกอบแต่ละชนิดมาชุบสร้าง ห่อด้วยผ้าตามสีในตำนาน และพรมน้ำอมฤต จำนวนต้นกำเนิดใช้เล่าที่มาของกำลังดาว สีประจำวันกับสีผ้าในตำนานจึงแสดงแยกกัน <strong>กำลังดาวทั้ง 8 รวม 108</strong> กุศโลบายท้ายแต่ละรายการเป็นการตีความของแอปสำหรับทบทวน ไม่ใช่ข้อความอ้างอิงคัมภีร์หรือข้อยืนยันว่าเป็นคำอธิบายมาตรฐานเดียว</p>
                   <ul>
-                    {deityLegendOrder.map((planetName) => { const legend = planetDeityLegends[planetName]; return <li key={planetName}>
-                      <div className="sj-deity-legend-title"><span className="sj-color-dot" style={{ backgroundColor: legend.dayColorHex }} aria-hidden="true" /><strong>{legend.symbol} ดาว{legend.thai}</strong><span>กำลัง {legend.power}</span></div>
-                      <p>{legend.origin} · สีประจำวัน{legend.dayColor} · สีผ้าในตำนาน{legend.clothColor}</p>
-                      <small><strong>กุศโลบาย: ข้อคิดชวนทบทวน (การตีความของแอป):</strong> {legend.reflection}</small>
-                    </li>; })}
+                    {deityLegendOrder.map((planetName) => {
+                      const legend = planetDeityLegends[planetName];
+                      return (
+                        <li key={planetName}>
+                          <div className="sj-deity-legend-title">
+                            <span className="sj-color-dot" style={{ backgroundColor: legend.dayColorHex }} aria-hidden="true" />
+                            <strong>{legend.symbol} ดาว{legend.thai}</strong>
+                            <span>กำลัง {legend.power}</span>
+                          </div>
+                          <p>{legend.origin} · สีประจำวัน{legend.dayColor} · สีผ้าในตำนาน{legend.clothColor}</p>
+                          <small><strong>กุศโลบาย: ข้อคิดชวนทบทวน (การตีความของแอป):</strong> {legend.reflection}</small>
+                        </li>
+                      );
+                    })}
                   </ul>
                   <p className="sj-ketu-note"><strong>เกตุ:</strong> ตามเรื่องเล่าที่ใช้ในแอปเกิดจากนาค 9 ตัวและใช้เป็นมณฑลกลาง จึงไม่ได้รวมเป็นดาวเสวยอายุในวงรอบ 108 ปีชุดนี้ และไม่มีการเปลี่ยนวิธีคำนวณของ engine</p>
                 </details>
                 <details className="sj-harmonic-method">
                   <summary>วิธีอ่านฐาน 30° นี้คำนวณอย่างไร <ChevronDown aria-hidden="true" /></summary>
-                  <p>ระบบเทียบองศาภายในราศีของดาวแต่ละดวงกับองศาภายในราศีของดวงอาทิตย์กำเนิดด้วย modulo 30 แล้ววนซ้ำทุก 30 ปี ค่าอายุทศนิยมเป็นจุดเชิงคณิตศาสตร์ ส่วนช่องอายุเป็นการจัดกลุ่มตามการปัดค่าของสูตร วิธีนี้เป็นกรอบทบทวนเชิงสัญลักษณ์ ไม่ใช่ตำแหน่งดาวจร ณ วันนั้นหรือวันเกิดเหตุการณ์ที่คำนวณได้</p>
+                  <p>ระบบเทียบองศาภายในราศีของดาวแต่ละดวงกับองศาภายในราศีของดวงอาทิตย์กำเนิดด้วย modulo 30 แล้ววนซ้ำทุก 30 ปี ร่วมกับอัตราความเร็วจริงของดวงอาทิตย์ (True Solar Arc) ค่าอายุทศนิยมเป็นจุดเชิงคณิตศาสตร์ดาราศาสตร์ ส่วนช่องอายุเป็นการจัดกลุ่มตามการปัดค่าของสูตร</p>
                 </details>
               </section>
 
+              {/* Transit Section */}
               <section className="sj-selected-year sj-raised" aria-labelledby="selected-year-title">
-                <div className="sj-section-heading"><div><p className="sj-kicker">04 · วันอ้างอิงของปีที่เลือก</p><h2 id="selected-year-title">หลักฐาน ณ วันเกิดของอายุ {selectedAge} ปี</h2></div><span className="sj-source">{selectedTransit?.target_date ? formatThaiDate(selectedTransit.target_date) : "ไม่มีวันที่อ้างอิง"}</span></div>
+                <div className="sj-section-heading">
+                  <div>
+                    <p className="sj-kicker">04 · วันอ้างอิงของปีที่เลือก</p>
+                    <h2 id="selected-year-title">หลักฐาน ณ วันเกิดของอายุ {selectedAge} ปี</h2>
+                  </div>
+                  <span className="sj-source">{selectedTransit?.target_date ? formatThaiDate(selectedTransit.target_date) : "ไม่มีวันที่อ้างอิง"}</span>
+                </div>
                 <p className="sj-boundary-note"><CircleAlert aria-hidden="true" />ข้อมูลดาวจรชุดนี้คำนวณ ณ วันเกิดของปีที่เลือกหนึ่งวัน ไม่ใช่พยากรณ์รายวันหรือภาพแทนทั้งปี</p>
                 <div className="sj-evidence-grid">
-                  <article><h3>ดาวจรที่ทำมุมสู่อาทิตย์</h3>{solarTransits.length ? <ul>{solarTransits.map((item: any, index: number) => <li key={`${item.transit_planet}-${item.aspect_name}-${index}`}><strong>{item.transit_symbol} ดาว{item.transit_thai} {item.aspect_thai} อาทิตย์เดิม</strong><span>orb {Number(item.orb).toFixed(2)}°</span></li>)}</ul> : <p>ไม่พบมุมจากดาวจรสู่อาทิตย์ภายในเกณฑ์ของวันอ้างอิงนี้</p>}</article>
-                  <details><summary>ข้อมูลสนับสนุนอื่นในวันอ้างอิง <ChevronDown aria-hidden="true" /></summary><p>เครื่องคำนวณพบมุมดาวจรทั้งหมด {selectedTransit?.active_aspects?.length ?? 0} รายการ ณ วันอ้างอิงนี้ เปิด “ข้อมูลดวง” เพื่อดูตำแหน่งกำเนิดและมุมทั้งหมด</p><button className="sj-button sj-soft" onClick={() => changePage("advanced")}>เปิดข้อมูลดวง</button></details>
+                  <article>
+                    <h3>ดาวจรที่ทำมุมสู่อาทิตย์</h3>
+                    {solarTransits.length ? (
+                      <ul>{solarTransits.map((item: any, index: number) => <li key={`${item.transit_planet}-${item.aspect_name}-${index}`}><strong>{item.transit_symbol} ดาว{item.transit_thai} {item.aspect_thai} อาทิตย์เดิม</strong><span>orb {Number(item.orb).toFixed(2)}°</span></li>)}</ul>
+                    ) : (
+                      <p>ไม่พบมุมจากดาวจรสู่อาทิตย์ภายในเกณฑ์ของวันอ้างอิงนี้</p>
+                    )}
+                  </article>
                 </div>
                 {selectedYear.reading && (
                   <div className="sj-interpretation">
@@ -1388,46 +1467,129 @@ export function SolarianJourney() {
                       <article><span>ตัวกระตุ้นจากดาวแทรก</span><p>{cleanInterpretation(selectedYear.reading.sub_detail?.catalyst_role || selectedYear.reading.sub_narrative)}</p>{selectedYear.reading.sub_detail?.immediate_caution && <small>{cleanInterpretation(selectedYear.reading.sub_detail.immediate_caution)}</small>}</article>
                     </div>
                     {selectedYear.reading.action_plan && <div className="sj-rule-actions"><article><span>หลักยึดในการตัดสินใจ</span><p>{cleanInterpretation(selectedYear.reading.action_plan.decision_framework)}</p></article><article><span>สิ่งที่ระบบเสนอให้พิจารณา</span><ul>{selectedYear.reading.action_plan.strategic_moves.slice(0, 3).map((move, index) => <li key={`${move}-${index}`}>{cleanInterpretation(move)}</li>)}</ul></article><article><span>เงื่อนไขลดความเสี่ยง</span><ul>{selectedYear.reading.action_plan.risk_mitigation.slice(0, 3).map((risk, index) => <li key={`${risk}-${index}`}>{cleanInterpretation(risk)}</li>)}</ul></article></div>}
-                    <p className="sj-interpretation-note">ข้อความส่วนนี้เป็นการตีความตามกฎของระบบ ไม่ใช่ข้อเท็จจริงที่วัดได้หรือคำรับรองเหตุการณ์ สำหรับการลงทุนต้องตรวจข้อมูลธุรกิจ ราคา สภาพคล่อง และความเสี่ยงจริงทุกครั้ง</p>
                   </div>
                 )}
               </section>
 
-              <section className="sj-action sj-raised sj-action-primary" aria-labelledby="action-title">
-                <div className="sj-section-heading"><div><p className="sj-kicker">เก็บสิ่งที่อยากลงมือทำ</p><h2 id="action-title">บันทึกก้าวถัดไป</h2></div><div className="sj-focus" role="group" aria-label="เรื่องที่กำลังวางแผน">{(Object.keys(focusLabels) as Focus[]).map((item) => <button key={item} aria-pressed={focus === item} onClick={() => selectFocus(item)}>{focusLabels[item]}</button>)}</div></div>
-                <div className="sj-action-grid"><div><span className="sj-status">คำถามช่วยวางแผน · {guidanceTabLabels[guidanceTab]}</span><h3>{planningScopeLead[guidanceTab]}: {planningPrompts[focus].question}</h3><p>{planningPrompts[focus].check}</p></div><form onSubmit={saveJournalEntry}><label htmlFor="plan-note">สิ่งที่จะทำหรือข้อมูลที่จะตรวจ</label><textarea id="plan-note" rows={4} value={note} onChange={(event) => setNote(event.target.value)} placeholder="เขียนเป็นประโยคสั้น ๆ ที่กลับมาทบทวนได้" required maxLength={1200} /><button className="sj-button sj-primary"><Save aria-hidden="true" />เพิ่มในสมุดแผน</button><small>เก็บในเบราว์เซอร์เครื่องนี้ พร้อมมุมมอง วันอ้างอิง และช่วงเวลาของคำแนะนำ</small></form></div>
+              {/* 3. Deep Aspect Dynamics Grid */}
+              <section className="sj-raised" style={{ padding: "20px" }}>
+                <div className="sj-section-heading" style={{ marginBottom: "16px" }}>
+                  <div>
+                    <p className="sj-kicker">การวิเคราะห์มุมสัมพันธ์ระดับลึก</p>
+                    <h2>พลวัตมุมสัมพันธ์และคู่ดาว (Aspect Dynamics)</h2>
+                  </div>
+                </div>
+                <AspectGrid chart={data.chart} aspectDynamics={data.aspect_dynamics} selectedPlanet={selectedPlanet} onSelectPlanet={setSelectedPlanet} />
               </section>
 
-            </section>
+              {/* 4. Planet Data Table */}
+              <section className="sj-raised" style={{ padding: "20px" }}>
+                <div className="sj-section-heading" style={{ marginBottom: "16px" }}>
+                  <div>
+                    <p className="sj-kicker">ตารางข้อมูลพิกัดดาวและมาตรฐานดาว</p>
+                    <h2>รายละเอียดตำแหน่งดาวกำเนิด (Natal Planets Table)</h2>
+                  </div>
+                </div>
+                <PlanetTable chart={data.chart} selectedPlanet={selectedPlanet} onSelectPlanet={setSelectedPlanet} />
+              </section>
+            </div>
           )}
         </main>
       )}
 
-      {deleted && <div className="sj-toast" role="status"><span>ลบบันทึกแล้ว</span><button onClick={undoDelete}>ย้อนคืน</button><button onClick={() => setDeleted(null)} aria-label="ปิดข้อความ"><X aria-hidden="true" /></button></div>}
+      {/* 3. ปาจื่อ (4 เสา) */}
+      {page === "bazi" && (
+        <main className="sj-page sj-narrow" id="main" tabIndex={-1}>
+          <div className="sj-section-heading">
+            <div>
+              <p className="sj-kicker">ระบบสี่เสาชะตาชีวิต (Four Pillars of Destiny)</p>
+              <h1>พิมพ์เขียวห้าธาตุและปาจื่อ</h1>
+            </div>
+            {data?.profile && <span className="sj-status">{data.profile.name}</span>}
+          </div>
+          {data?.bazi ? (
+            <BaziCard bazi={data.bazi} currentAge={selectedAge} />
+          ) : (
+            <div className="sj-guidance-unavailable" role="status">
+              <CircleAlert aria-hidden="true" />
+              <div>
+                <h3>ยังไม่มีข้อมูลปาจื่อ</h3>
+                <p>กรุณากลับไปที่หน้า “ดวงชะตา” เพื่อคำนวณดวงชะตาก่อนเปิดดูพิมพ์เขียวปาจื่อ</p>
+              </div>
+            </div>
+          )}
+        </main>
+      )}
 
-      <footer className="sj-footer"><span>สุริยวิถี · Solar Atlas</span><span>โหราศาสตร์ไม่รับประกันเหตุการณ์หรือผลตอบแทน การตัดสินใจลงทุนต้องใช้ข้อมูลและการประเมินความเสี่ยงจริง</span></footer>
-      <AccountDialog open={accountOpen} onClose={() => setAccountOpen(false)} onSuccess={async (user, token, savedCurrentOnRegister) => {
-        const generation = ++authGenerationRef.current;
-        const pending = pendingProfileRef.current;
-        pendingProfileRef.current = null;
-        setCurrentUser(user);
-        try {
-          if (pending) {
-            const loaded = await loadProfiles(token, false, generation);
-            if (generation !== authGenerationRef.current) return;
-            if (savedCurrentOnRegister) {
-              const saved = loaded?.find((profile) => profile.name === pending.name && profile.birth_date === pending.birth_date && profile.birth_time === pending.birth_time);
-              if (saved) setActiveProfileId(saved.id);
-              setStatus(`บันทึกโปรไฟล์ ${pending.name} พร้อมบัญชีแล้ว`);
+      {/* 4. ผู้ร่วมทาง (Connections / Synastry) */}
+      {page === "connections" && (
+        <ConnectionsPage
+          person1Params={currentParams}
+          profiles={profiles}
+          cities={cities}
+        />
+      )}
+
+      {/* 5. AI ปรึกษาดวง (AI Counselor) */}
+      {page === "ai" && (
+        <main className="sj-page" id="main" tabIndex={-1}>
+          <AICounselorView
+            currentParams={currentParams}
+            user={currentUser as any}
+            token={localStorage.getItem("solarian_token")}
+            onOpenPaywall={() => setPaywallOpen(true)}
+            onOpenAuth={() => setAccountOpen(true)}
+            onUserUpdated={(updated) => setCurrentUser(updated as any)}
+          />
+        </main>
+      )}
+
+      {/* Paywall Modal */}
+      <AIPaywallModal
+        isOpen={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        token={localStorage.getItem("solarian_token")}
+        onUpgradeSuccess={(updated) => {
+          setCurrentUser(updated as any);
+          setPaywallOpen(false);
+          setStatus("อัปเกรดแพ็กเกจเรียบร้อยแล้ว ยินดีต้อนรับสู่ Solarian AI Counselor");
+        }}
+        currentTier={currentUser?.subscription_tier ?? "free"}
+      />
+
+      <footer className="sj-footer">
+        <span>สุริยวิถี · Solar Atlas</span>
+        <span>โหราศาสตร์เพื่อความเข้าใจตนเองและการตัดสินใจ การวางแผนชีวิตต้องใช้ข้อมูลและการประเมินความเป็นจริงร่วมด้วย</span>
+      </footer>
+
+      <AccountDialog
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        onSuccess={async (user, token, savedCurrentOnRegister) => {
+          const generation = ++authGenerationRef.current;
+          const pending = pendingProfileRef.current;
+          pendingProfileRef.current = null;
+          setCurrentUser(user);
+          try {
+            if (pending) {
+              const loaded = await loadProfiles(token, false, generation);
+              if (generation !== authGenerationRef.current) return;
+              if (savedCurrentOnRegister) {
+                const saved = loaded?.find((profile) => profile.name === pending.name && profile.birth_date === pending.birth_date && profile.birth_time === pending.birth_time);
+                if (saved) setActiveProfileId(saved.id);
+                setStatus(`บันทึกโปรไฟล์ ${pending.name} พร้อมบัญชีแล้ว`);
+              } else {
+                await persistProfile(pending, token, generation);
+              }
+            } else {
+              await loadProfiles(token, true, generation);
             }
-            else await persistProfile(pending, token, generation);
-          } else {
-            await loadProfiles(token, true, generation);
+          } catch (reason) {
+            if (generation === authGenerationRef.current) setError(reason instanceof Error ? reason.message : "โหลดโปรไฟล์ไม่สำเร็จ");
           }
-        } catch (reason) {
-          if (generation === authGenerationRef.current) setError(reason instanceof Error ? reason.message : "โหลดโปรไฟล์ไม่สำเร็จ");
-        }
-      }} currentChart={data ? currentParams : null} />
+        }}
+        currentChart={data ? currentParams : null}
+      />
     </div>
   );
 }

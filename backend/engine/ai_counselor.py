@@ -15,31 +15,26 @@ import urllib.error
 from typing import Dict, Any, List, Optional
 
 
-SYSTEM_COACH_PERSONA = """คุณคือ "Solarian Life Strategy AI Counselor" - ที่ปรึกษาการวางแผนชีวิตระดับสูงที่ผสานโหราศาสตร์สากล (Placidus & Western Aspects), มหาทักษาไทย 108 ปี และระบบสี่เสาชะตาชีวิตปาจื่อ (Bazi Four Pillars) เข้าด้วยกันอย่างลึกซึ้ง
+SYSTEM_COACH_PERSONA = """คุณคือ "Solarian Life Strategy AI Counselor" - ที่ปรึกษาการสังเคราะห์ชะตาชีวิตระดับสูงที่ผสานมหาทักษาไทย 108 ปี, โหราศาสตร์สากล (Placidus & Aspects), วิถีองศาฐาน 30° (True Solar Arc) และระบบสี่เสาปาจื่อ เข้าด้วยกันอย่างลึกซึ้ง
 
-หลักการสำคัญในการวิเคราะห์ความสัมพันธ์ต่างมิติของดวงดาวและชะตาชีวิต:
-1. ปราศจากความงมงายและการทำนายเชิงหายนะ (No Fatalism): มองดวงดาวและธาตุเป็น "พิมพ์เขียวพลังงานและระบบเอนโทรปี (Entropy Dynamics)" ไม่ใช่ชะตากรรมที่เปลี่ยนแปลงไม่ได้
-2. เน้นสร้างพลังอำนาจในการตัดสินใจ (Empowering & Actionable): ให้แนวทางแก้ไข กลยุทธ์เชิงรุก และระบบลดความเสี่ยงที่จับต้องได้จริงในโลกธุรกิจ การงาน การเงิน และความสัมพันธ์
-3. การสังเคราะห์ความสัมพันธ์ต่างมิติของดวงดาว (Multi-Dimensional Astrological Synthesis):
-   เมื่อวิเคราะห์การเปลี่ยนผ่านของวัฏจักรชีวิต (เช่น การเปลี่ยนดาวเสวยอายุ หรือดาวแทรกในมหาทักษา 108 ปี) ให้ผสาน 3 เสาหลักเสมอ:
-   ก) บทบาทภพเรือนของลัคนา (House Lordship): ดูว่าดาวนั้นเป็นเจ้าเรือนใดของลัคนา (เช่น ตนุลัคน์ = ชะตาคืนสู่เนื้อแท้ ควบคุมตัวตนได้เต็มร้อย, กัมมะ = หน้าที่การงาน, กดุมภะ/ลาภะ = การเงินโชคลาภ, อริ/มรณะ/วินาศ = บททดสอบการแก้ปัญหา)
-   ข) ภูมิพยากรณ์ทักษาเดิม (Natal Thaksa Status): ดูสถานะของดาวตามวันเกิด (เช่น บริวาร, อายุ, เดช, ศรี = โชคลาภผลประโยชน์, มูละ = รากฐานสินทรัพย์ถาวรโครงสร้าง, อุตสาหะ = การลงแรงบุกเบิก, มนตรี = ผู้ใหญ่อุปถัมภ์, กาลกิณี = อุปสรรคและจุดที่ต้องรอบคอบ)
-   ค) พลวัตคู่ดาวสัมพันธ์ (Planetary Pair Dynamics): วิเคราะห์มิติเมื่อดาวอื่นเข้ามาแทรก เช่น
-      - คู่มิตรใหญ่ (เช่น เสาร์ ๗ + ราหู ๘): มิตรมหาสนิท ลาภใหญ่ การร่วมทุน พันธมิตรเกื้อหนุน
-      - คู่สมพล / คู่ปฏิรูปโครงสร้าง (เช่น เสาร์ ๗ + พฤหัสบดี ๕): การเปลี่ยนแปลงโครงสร้างครั้งใหญ่ ยกระดับบทบาทสู่ที่ปรึกษา จัดระเบียบสินทรัพย์
-      - คู่ศัตรู / พระศุกร์เข้าพระเสาร์แทรก (เช่น เสาร์ ๗ + ศุกร์ ๖): ความขัดแย้งทางอารมณ์หรือผลประโยชน์ การลงทุนที่ต้องรอบคอบเป็นพิเศษ
-      - คู่ธาตุ (เช่น เสาร์ ๗ + อาทิตย์ ๑ คู่ธาตุไฟ, พุธ ๔ + ศุกร์ ๖ คู่ธาตุน้ำ): การเสริมพลังธาตุอย่างร่มเย็นหรือทรงพลัง
-
-ตัวอย่างมาตรฐานการวิเคราะห์ชั้นครู (Gold Standard Reference):
-- เมื่อพ้นวัยพุธ (๔) เข้าสู่เสาร์ (๗) เสวยอายุ สำหรับคนเกิดวันอาทิตย์ ลัคนามังกร:
-  * เสาร์มีสถานะ 2 เด้ง: เป็นทั้ง "ตนุลัคน์" (ควบคุมชีวิตตนเองอย่างเต็มร้อย ไม่ต้องพึ่งจมูกคนอื่นหายใจ) และเป็น "มูละเดิม" (การลงเสาเข็มวางรากฐาน กิจการหลัก สินทรัพย์ถาวร Hard Assets แทนที่ Cash Flow หมุนเวียนแบบพุธ)
-  * โทนชีวิตเปลี่ยนจากความคล่องตัวยืดหยุ่น สู่การสร้างสถาบัน/ระบบที่อยู่ได้อย่างยั่งยืน (Infrastructure & Foundation) แบกรับงานสเกลใหญ่ขึ้น
-  * เมื่อพฤหัส (๕) แทรก: เกิดการปฏิรูปโครงสร้าง/ยกระดับบทบาท
-  * เมื่อราหู (๘) แทรก: คู่มิตรใหญ่ ได้ลาภก้อนโต ขยายอาณาเขต
-  * เมื่อศุกร์ (๖) แทรก: พระศุกร์เข้าพระเสาร์แทรก ต้องระวังเรื่องความขัดแย้งในผลประโยชน์และบริหารความตึงเครียด
-  * นำเสนอพร้อม "ตารางบทสรุปเปรียบเทียบมิติต่างๆ" เสมอ
-
-4. ใช้น้ำเสียงสุขุม ลุ่มลึก อบอุ่น มีระดับ และสร้างแรงบันดาลใจสูง (Executive & Compassionate Tone) ห้ามใช้คำทำนายเชิงงมงายหรือสิ้นหวังเด็ดขาด
+กฎเหล็กและหลักการสังเคราะห์จากภาพใหญ่ไปหาภาพเล็ก (Macro to Micro Synthesis):
+1. หน้าที่ของ AI: ร้อยเรียงคำทำนายจากสิ่งที่ระบบคำนวณไว้ในข้อ (1) และ (2) ออกมาอย่างทรงพลัง สุขุม ลุ่มลึก และนำไปใช้ได้จริง
+   - ห้ามคิดคำนวณหรือแต่งเติมตำแหน่งดาวหรือตัวเลของศาเอง เพราะระบบคำนวณด้วยดาราศาสตร์แม่นยำ (Swiss Ephemeris DE431) ไว้อย่างชัดเจนแล้ว
+2. การสังเคราะห์ 3 เสาหลัก (จากภาพใหญ่สู่ภาพย่อย):
+   ก) เสาหลักที่ 1 - ดาวกระทบ 8 ดวงเดิม (8 Core Natal Planets):
+      - ตรวจสอบเจ้าเรือน (House Lordship) ของแต่ละดวง
+      - ตรวจสอบภพที่สถิต (House Placement)
+      - ตรวจสอบตำแหน่งมหาทักษาเดิม (บริวาร, อายุ, เดช, ศรี, มูละ, อุตสาหะ, มนตรี, กาลกิณี)
+      - ตรวจสอบคู่ดาวสัมพันธ์ (คู่มิตร, คู่ศัตรู, คู่สมพล, คู่ธาตุ)
+   ข) เสาหลักที่ 2 - มหาทักษา 108 ปี (Current Life Cycle & Timing):
+      - ดาวเสวยอายุ (Major Ruler) กุมภาพใหญ่ของยุค: สัมพันธ์กับภพอะไรในดวงเดิม เป็นตำแหน่งอะไรในมหาทักษาเดิม
+      - ดาวแทรก (Sub Ruler) เป็นตัวเร่งและจุดเปลี่ยน: สัมพันธ์กับภพอะไรในดวงเดิม เป็นตำแหน่งอะไรในมหาทักษาเดิม
+      - ได้คู่ดาวอะไรกับดาวเสวยอายุ (เช่น คู่มิตรใหญ่ ๗+๘, คู่สมพล/ปฏิรูปโครงสร้าง ๗+๕, คู่ศัตรู/พระศุกร์เข้าพระเสาร์แทรก ๗+๖, คู่ธาตุน้ำ ๔+๖)
+   ค) เสาหลักที่ 3 - ดาวจรจริง และ วิถีองศาดาวกระทบฐาน 30 องศา (Astronomically Deterministic Triggers):
+      - ผสานจุดกระตุ้นวิถีองศาและดาวจร ณ วันอ้างอิงเป็นเรดาร์จังหวะชีวิตเฉพาะช่วงเวลา
+3. น้ำเสียงและสไตล์การพยากรณ์:
+   - สุขุม นิ่ง ลึกซึ้ง อบอุ่น มีระดับ ดุจปราชญ์ผู้ชี้ทางยุทธศาสตร์ (Executive & Compassionate Wisdom)
+   - ปราศจากความงมงายและการทำนายเชิงหายนะ (No Fatalism) มุ่งเน้นการสร้างพลังอำนาจในการตัดสินใจ การบริหารความเสี่ยง และการวางแผนเชิงรุก
 """
 
 
@@ -52,6 +47,9 @@ def build_astrology_prompt_context(
     bazi_data: Optional[Dict[str, Any]] = None,
     aspect_dynamics: Optional[List[Dict[str, Any]]] = None
 ) -> str:
+    from backend.engine.interpretation import build_planetary_context, canonical_planet_name
+    from backend.engine.dignities import evaluate_relationship
+
     meta = chart_data.get("metadata", {})
     name = meta.get("name", "เจ้าชะตา")
     birth_date = meta.get("birth_date", "")
@@ -59,21 +57,51 @@ def build_astrology_prompt_context(
     loc = chart_data.get("location_name", "Bangkok, Thailand")
 
     lines = [
-        "=== ข้อมูลเจ้าชะตา ===",
-        f"ชื่อ: {name}",
+        "================================================================================",
+        "ข้อมูลโทรมาตรดวงชะตาสำหรับการสังเคราะห์ (Macro to Micro Astrological Telemetry)",
+        "================================================================================",
+        f"ชื่อเจ้าชะตา: {name}",
         f"วันเดือนปีเกิด: {birth_date} เวลา {birth_time} น. สถานที่: {loc}",
-        f"วันเกิดทางโหราศาสตร์: {day_res.get('day_name')} ({'ก่อนพระอาทิตย์ขึ้น' if day_res.get('is_before_sunrise') else 'หลังพระอาทิตย์ขึ้น'})",
+        f"วันเกิดทางมหาทักษา: {day_res.get('day_name')} ({'ก่อนพระอาทิตย์ขึ้น' if day_res.get('is_before_sunrise') else 'หลังพระอาทิตย์ขึ้น'})",
+        f"ลัคนา (Ascendant): ราศี{chart_data['angles']['Ascendant']['sign_thai']} ({chart_data['angles']['Ascendant']['formatted_dms']})",
         "",
-        "=== โหราศาสตร์สากล (Western Placidus & Trinity) ===",
-        f"ลัคนา (Ascendant): {chart_data['angles']['Ascendant']['sign_thai']} ({chart_data['angles']['Ascendant']['formatted_dms']})",
-        f"อาทิตย์ (Sun): {chart_data['planets_dict']['Sun']['sign_thai']} ภพ {chart_data['planets_dict']['Sun']['house']}",
-        f"จันทร์ (Moon): {chart_data['planets_dict']['Moon']['sign_thai']} ภพ {chart_data['planets_dict']['Moon']['house']}",
-        f"เมอริเดียน (MC): {chart_data['angles']['Midheaven']['sign_thai']}",
+        "--- เสาหลักที่ 1: ดาวกระทบ 8 ดวงเดิม (8 Core Natal Planets) ---",
+        "(วิเคราะห์: เจ้าเรือน, ภพที่สถิต, ตำแหน่งมหาทักษาเดิม, คู่ดาวสัมพันธ์)",
     ]
 
+    core_8 = [
+        ("Sun", 1, "อาทิตย์", "๑"),
+        ("Moon", 2, "จันทร์", "๒"),
+        ("Mars", 3, "อังคาร", "๓"),
+        ("Mercury", 4, "พุธ", "๔"),
+        ("Jupiter", 5, "พฤหัสบดี", "๕"),
+        ("Venus", 6, "ศุกร์", "๖"),
+        ("Saturn", 7, "เสาร์", "๗"),
+        ("Rahu", 8, "ราหู", "๘"),
+    ]
+
+    for p_name, p_num, p_thai, p_sym in core_8:
+        p_ctx = build_planetary_context(
+            natal_chart=chart_data,
+            planet_name=p_name,
+            thaksa_matrix=thaksa_matrix
+        )
+        plc = p_ctx.get("placement", {})
+        h_rule = p_ctx.get("house_rulership", {})
+        ruled_str = ", ".join([f"เรือน {h['house']} ({h.get('theme', '')})" for h in h_rule.get("houses", [])]) or "ไม่มีเรือนเกษตรหลักในชะตานี้"
+        thaksa_role = p_ctx.get("natal_thaksa") or {}
+        role_str = f"{thaksa_role.get('role_thai', '—')} ({thaksa_role.get('role_desc', '')})"
+
+        lines.append(
+            f"• ดาว{p_thai} ({p_sym}):\n"
+            f"  - สถิตภพ: ภพที่ {plc.get('house', '—')} ({plc.get('house_theme', '—')}) ในราศี{plc.get('sign_thai', '—')}\n"
+            f"  - เจ้าเรือน: {ruled_str}\n"
+            f"  - ตำแหน่งมหาทักษาเดิม: {role_str}"
+        )
+
     if aspect_dynamics:
-        lines.append("\n=== คู่ดาวและองศาทำมุมสัมพันธ์ที่เด่นชัด (Top Aspect Dynamics) ===")
-        for ad in aspect_dynamics[:4]:
+        lines.append("\n--- คู่ดาวสัมพันธ์ที่ส่งผลเด่นชัดในดวงเดิม (Planetary Pair Dynamics) ---")
+        for ad in aspect_dynamics[:6]:
             pair_info = ad.get("thai_pair_info") or {}
             pair_type = pair_info.get("type", "")
             lines.append(f"- {ad['body1_thai']} ทำมุม {ad['aspect_thai']} ({ad['aspect_symbol']}) กับ {ad['body2_thai']} [{pair_type}]: {ad['core_dynamic']}")
@@ -85,14 +113,7 @@ def build_astrology_prompt_context(
     except ValueError:
         curr_age = None
 
-    sun = chart_data['planets_dict']['Sun']
-    lines.append(f"\n=== แกนอาทิตย์: longitude {sun.get('longitude')}° / องศาในราศี {sun.get('formatted_dms')} ===")
-    sun_aspects = [a for a in chart_data.get('aspects', []) if a.get('body1') == 'Sun' or a.get('body2') == 'Sun']
-    lines.append("มุมสัมพันธ์สู่อาทิตย์ทั้งหมดจากเครื่องคำนวณ: " + json.dumps(sun_aspects, ensure_ascii=False))
-    lines.append("\n=== วิถีองศาดาวกระทบฐาน 30°: ข้อมูลตามสูตร แยกจากดาวจรจริง ===")
-    lines.append("(องศาดาวกำเนิด − องศาอาทิตย์กำเนิด) mod 30; วนรอบ 30 ปี; ค่า 0 เริ่มรอบ 30 ปี; exact_age เป็นอายุทศนิยม ส่วน rounded_age คือช่องปีที่ปัดค่าด้วย Python round ไม่ใช่วันเกิดเหตุการณ์")
-    lines.append(json.dumps(timeline_data.get('degree_triggers_catalog', []), ensure_ascii=False))
-    lines.append(f"\n=== มหาทักษาไทย 108 ปี (วัยปัจจุบัน {curr_age} ปี) ===")
+    lines.append(f"\n--- เสาหลักที่ 2: มหาทักษา 108 ปี (จังหวะชีวิต ณ อายุปัจจุบัน {curr_age} ปี) ---")
     years_map = timeline_data.get("years_map", [])
     curr_reading = None
     for y_entry in years_map:
@@ -101,45 +122,61 @@ def build_astrology_prompt_context(
             break
 
     if curr_reading:
-        lines.append(f"ดาวเสวยอายุ (Major): ดาว{curr_reading['major_planet']['thai']}")
-        lines.append(f"ดาวแทรกอายุ (Sub): ดาว{curr_reading['sub_planet']['thai']}")
+        lines.append(f"• วงรอบอายุเต็ม: {curr_age} ปี (อายุย่าง {curr_reading.get('age_yang', curr_age + 1)} ปี, ค.ศ. {curr_reading.get('calendar_year')})")
+        lines.append(f"• ดาวเสวยอายุ (Major Ruler - บริบทภาพใหญ่): ดาว{curr_reading['major_planet']['thai']} ({curr_reading['major_planet']['symbol']})")
+        lines.append(f"• ดาวแทรกอายุ (Sub Ruler - ตัวเร่งและจุดเปลี่ยน): ดาว{curr_reading['sub_planet']['thai']} ({curr_reading['sub_planet']['symbol']})")
+        lines.append(f"• ทักษาจรประจำปี (Annual Thaksa): ดาว{curr_reading['annual_thaksa']['thai']} ({curr_reading['annual_thaksa']['symbol']})")
+
         rd = curr_reading.get("reading", {})
         macro_ctx = rd.get("macro_detail", {}).get("planetary_context", {})
         sub_ctx = rd.get("sub_detail", {}).get("planetary_context", {})
 
-        # 1. House Lordship Context
+        # House Lordship Context
         if macro_ctx.get("house_rulership", {}).get("houses"):
             m_houses = [f"เรือน {h['house']} ({h.get('theme', '')})" for h in macro_ctx["house_rulership"]["houses"]]
-            lines.append(f"- สถานะภพเรือนดาวเสวยอายุ: เป็นเจ้าเรือน {', '.join(m_houses)}")
+            lines.append(f"  - ความสัมพันธ์กับภพเดิมของดาวเสวยอายุ: เป็นเจ้าเรือน {', '.join(m_houses)}")
         if sub_ctx.get("house_rulership", {}).get("houses"):
             s_houses = [f"เรือน {h['house']} ({h.get('theme', '')})" for h in sub_ctx["house_rulership"]["houses"]]
-            lines.append(f"- สถานะภพเรือนดาวแทรก: เป็นเจ้าเรือน {', '.join(s_houses)}")
+            lines.append(f"  - ความสัมพันธ์กับภพเดิมของดาวแทรก: เป็นเจ้าเรือน {', '.join(s_houses)}")
 
-        # 2. Natal Thaksa Context
+        # Natal Thaksa Context
         if macro_ctx.get("natal_thaksa"):
             mt = macro_ctx["natal_thaksa"]
-            lines.append(f"- สถานะทักษาเดิมดาวเสวยอายุ: {mt['role_thai']} ({mt['role_desc']})")
+            lines.append(f"  - ตำแหน่งมหาทักษาเดิมของดาวเสวยอายุ: {mt['role_thai']} ({mt['role_desc']})")
         if sub_ctx.get("natal_thaksa"):
             st = sub_ctx["natal_thaksa"]
-            lines.append(f"- สถานะทักษาเดิมดาวแทรก: {st['role_thai']} ({st['role_desc']})")
+            lines.append(f"  - ตำแหน่งมหาทักษาเดิมของดาวแทรก: {st['role_thai']} ({st['role_desc']})")
 
-        # 3. Synergy pair
+        # Pairing Dynamic between Major and Sub Ruler
         if rd.get("sub_detail", {}).get("pair_type"):
-            lines.append(f"- พลวัตคู่ดาวเสวย+แทรก: {rd['sub_detail']['pair_type']} ({rd['sub_detail'].get('pair_desc', '')})")
+            lines.append(f"  - พลวัตคู่ดาวเสวยอายุ + ดาวแทรก: {rd['sub_detail']['pair_type']} ({rd['sub_detail'].get('pair_desc', '')})")
 
-        lines.append("ดาวกระทบทุกดวงในช่องปีปัจจุบัน: " + json.dumps(curr_reading.get("degree_triggers", []), ensure_ascii=False))
-        lines.append("บทตีความจุดกระตุ้น: " + json.dumps(rd.get("degree_trigger_details", []), ensure_ascii=False))
         if rd.get("macro_detail"):
-            lines.append(f"ธีมหลักของยุค: {rd['macro_detail']['epoch_theme']}")
+            lines.append(f"  - ธีมหลักของยุค: {rd['macro_detail']['epoch_theme']}")
         if rd.get("action_plan"):
-            lines.append(f"เข็มทิศชี้นำ: {rd['action_plan']['decision_framework']}")
+            lines.append(f"  - เข็มทิศชี้นำการตัดสินใจ: {rd['action_plan']['decision_framework']}")
+
+    lines.append("\n--- เสาหลักที่ 3: ดาวจรจริง และ วิถีองศาดาวกระทบฐาน 30 องศา (คำนวณแบบ Astronomically Deterministic) ---")
+    sun = chart_data['planets_dict']['Sun']
+    lines.append(f"• แกนดวงอาทิตย์กำเนิด: ลองจิจูด {sun.get('longitude')}° ({sun.get('sign_thai')} {sun.get('formatted_dms')})")
+    sun_aspects = [a for a in chart_data.get('aspects', []) if a.get('body1') == 'Sun' or a.get('body2') == 'Sun']
+    lines.append("มุมสัมพันธ์สู่อาทิตย์ทั้งหมดจากเครื่องคำนวณ: " + json.dumps(sun_aspects, ensure_ascii=False))
+    lines.append("\n=== วิถีองศาดาวกระทบฐาน 30°: ข้อมูลตามสูตร แยกจากดาวจรจริง ===")
+    lines.append("(องศาดาวกำเนิด − องศาอาทิตย์กำเนิด) mod 30; วนรอบ 30 ปี; ค่า 0 เริ่มรอบ 30 ปี; exact_age เป็นอายุทศนิยม ส่วน rounded_age คือช่องปีที่ปัดค่าด้วย Python round ไม่ใช่วันเกิดเหตุการณ์")
+    lines.append(json.dumps(timeline_data.get('degree_triggers_catalog', []), ensure_ascii=False))
+    lines.append("• วิถีองศาดาวกระทบฐาน 30° ในช่องอายุนี้:")
+    degree_triggers = curr_reading.get("degree_triggers", []) if curr_reading else []
+    if degree_triggers:
+        lines.append(json.dumps(degree_triggers, ensure_ascii=False))
+    else:
+        lines.append("ไม่มีจุดกระตุ้นในช่องอายุนี้")
 
     if bazi_data:
         pillars = bazi_data.get("four_pillars", {})
         dm = bazi_data.get("day_master", {})
         elem_pct = bazi_data.get("five_elements_percent", {})
         f_elems = ", ".join(dm.get("favorable_elements", []))
-        lines.append(f"\n=== สี่เสาชะตาชีวิตปาจื่อ (Bazi Four Pillars) ===")
+        lines.append(f"\n--- ระบบสี่เสาชะตาชีวิตปาจื่อ (Bazi Four Pillars Context) ---")
         lines.append(f"เวลาสุริยคติแท้ (True Solar Time): {bazi_data.get('true_solar_time')}")
         lines.append(f"เสาปี: {pillars.get('year', {}).get('stem', {}).get('chinese')}{pillars.get('year', {}).get('branch', {}).get('chinese')} ({pillars.get('year', {}).get('stem', {}).get('thai')}/{pillars.get('year', {}).get('branch', {}).get('thai')})")
         lines.append(f"เสาเดือน: {pillars.get('month', {}).get('stem', {}).get('chinese')}{pillars.get('month', {}).get('branch', {}).get('chinese')} [{pillars.get('month', {}).get('ten_god', {}).get('chinese')}]")
@@ -148,6 +185,9 @@ def build_astrology_prompt_context(
         lines.append(f"สมดุลห้าธาตุ: ไม้ {elem_pct.get('Wood')}%, ไฟ {elem_pct.get('Fire')}%, ดิน {elem_pct.get('Earth')}%, ทอง {elem_pct.get('Metal')}%, น้ำ {elem_pct.get('Water')}%")
         lines.append(f"ธาตุปรับสมดุล/ส่งเสริม (Favorable): {f_elems}")
 
+    lines.append("\n================================================================================")
+    lines.append("คำสั่งแก่ AI: ร้อยเรียงคำทำนายจากข้อ 1, 2 และ 3 ออกมาโดยสังเคราะห์จากภาพใหญ่ไปหาภาพเล็ก")
+    lines.append("================================================================================")
     return "\n".join(lines)
 
 

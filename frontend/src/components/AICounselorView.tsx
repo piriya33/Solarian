@@ -297,6 +297,59 @@ export const AICounselorView: React.FC<AICounselorViewProps> = ({
         </div>
       </section>
 
+      {/* Token Protection Lock Notice Banner */}
+      {(!user || user.subscription_tier === 'free') && !apiKey && (
+        <section className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-amber-500/10 via-slate-900 to-indigo-950/40 border border-amber-500/30 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0 font-bold shadow-md">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold mb-1">
+                  <Lock className="w-3 h-3 text-amber-400" />
+                  <span>โหมดจำกัดโควตา Token (เร็วๆ นี้)</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  ระบบการตีความด้วย AI กำลังเตรียมเปิดตัว
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 max-w-xl leading-relaxed">
+                  ขณะนี้ระบบจำกัดโควตาไว้ชั่วคราวเพื่อป้องกัน Token หมด คุณสามารถดูตัวอย่างหลักการวิเคราะห์ หรืออัปเกรดเพื่อรับสิทธิ์ใช้งานก่อนใคร
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onOpenPaywall}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md self-start sm:self-center shrink-0"
+            >
+              <Crown className="w-4 h-4" />
+              <span>ดูแพ็กเกจสมาชิก / ปลดล็อก</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+            <div className="p-3.5 rounded-xl bg-white/50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
+              <span className="font-bold text-amber-600 dark:text-amber-400 block mb-1">1. ดาวกระทบ 8 ดวงเดิม</span>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
+                วิเคราะห์เจ้าเรือน, ภพที่สถิต, ตำแหน่งมหาทักษาเดิม และคู่ดาวสัมพันธ์ (มิตร ศัตรู สมพล ธาตุ)
+              </p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-white/50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
+              <span className="font-bold text-sky-600 dark:text-sky-400 block mb-1">2. มหาทักษา 108 ปี</span>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
+                วิเคราะห์ดาวเสวยอายุและดาวแทรก สัมพันธ์กับภพเดิม ทักษาเดิม และพลวัตคู่ดาวของยุค
+              </p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-white/50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 block mb-1">3. ดาวจร & ฐาน 30° จริง</span>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
+                คำนวณแบบดาราศาสตร์แท้จริง (DE431) และ True Solar Arc ให้ AI ร้อยเรียงคำทำนายจากภาพใหญ่ไปหาภาพเล็ก
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Paywall Notice Alert if Triggered */}
       {paywallNotice && (
         <section className="rounded-3xl p-6 bg-gradient-to-r from-amber-500/15 to-indigo-500/15 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">

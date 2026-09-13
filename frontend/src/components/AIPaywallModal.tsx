@@ -142,8 +142,9 @@ export const AIPaywallModal: React.FC<AIPaywallModalProps> = ({
                   <span className="text-3xl font-black text-slate-900 dark:text-white">฿290</span>
                   <span className="text-xs text-slate-500 dark:text-slate-400">/ เดือน</span>
                 </div>
-                <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  ✓ ยกเลิกได้ตลอดเวลา ไม่มีข้อผูกมัด
+                <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>ยกเลิกได้ตลอดเวลา ไม่มีข้อผูกมัด</span>
                 </div>
               </div>
 
@@ -180,7 +181,7 @@ export const AIPaywallModal: React.FC<AIPaywallModalProps> = ({
               {isUpgrading && selectedPlan === "premium" ? (
                 "กำลังดำเนินการ..."
               ) : currentTier === "premium" ? (
-                <span>✓ แพ็กเกจปัจจุบันของคุณ</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> แพ็กเกจปัจจุบันของคุณ</span>
               ) : currentTier === "pro" ? (
                 <span>รวมอยู่ในสิทธิ์ Pro แล้ว</span>
               ) : (
@@ -224,8 +225,9 @@ export const AIPaywallModal: React.FC<AIPaywallModalProps> = ({
                   <span className="text-3xl font-black text-slate-900 dark:text-white">฿990</span>
                   <span className="text-xs text-slate-500 dark:text-slate-400">/ ตลอดชีพ</span>
                 </div>
-                <div className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-0.5">
-                  ★ จ่ายครั้งเดียว เข้าถึงฟีเจอร์ใหม่ตลอดไป
+                <div className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  <span>จ่ายครั้งเดียว เข้าถึงฟีเจอร์ใหม่ตลอดไป</span>
                 </div>
               </div>
 
@@ -266,7 +268,7 @@ export const AIPaywallModal: React.FC<AIPaywallModalProps> = ({
               {isUpgrading && selectedPlan === "pro" ? (
                 "กำลังดำเนินการ..."
               ) : currentTier === "pro" ? (
-                <span>✓ แพ็กเกจปัจจุบันของคุณ</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> แพ็กเกจปัจจุบันของคุณ</span>
               ) : (
                 <>
                   <span>เปิดใช้งาน Pro ตลอดชีพ</span>

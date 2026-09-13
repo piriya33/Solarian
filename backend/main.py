@@ -778,7 +778,7 @@ def generate_ai_reading(
     Synthesizes a deep executive life reading from Western Natal, Thai Thaksa,
     and Eastern Bazi data using Google Gemini (with deterministic synthesis fallback).
     """
-    # Paywall gating check
+    # Paywall / Token Protection Gating Check
     if not current_user:
         if not req.api_key:
             return {
@@ -791,7 +791,7 @@ def generate_ai_reading(
             return {
                 "success": False,
                 "status": "paywall_required",
-                "message": "คุณใช้โควตาทดลองใช้งานฟรีครบแล้ว กรุณายกระดับเป็น Premium หรือ Pro เพื่อรับคำปรึกษา AI ได้ไม่จำกัด",
+                "message": "คุณใช้โควตาทดลองใช้งานฟรีครบแล้ว กรุณายกระดับเป็น Premium หรือ Pro เพื่อรับคำปรึกษา AI ได้ไม่จำกัด (ระบบอยู่ระหว่างจำกัดโควตา Token)",
                 "user_tier": current_user.subscription_tier,
                 "ai_queries_count": current_user.ai_queries_count
             }
@@ -864,6 +864,7 @@ def chat_ai_counselor(
     """
     Answers user life counseling questions grounded in their chart telemetry.
     """
+    # Paywall / Token Protection Gating Check
     if not current_user:
         if not req.api_key:
             return {
@@ -876,7 +877,7 @@ def chat_ai_counselor(
             return {
                 "success": False,
                 "status": "paywall_required",
-                "message": "คุณใช้โควตาทดลองใช้งานฟรีครบแล้ว กรุณายกระดับเป็น Premium หรือ Pro เพื่อรับคำปรึกษา AI ได้ไม่จำกัด",
+                "message": "คุณใช้โควตาทดลองใช้งานฟรีครบแล้ว กรุณายกระดับเป็น Premium หรือ Pro เพื่อรับคำปรึกษา AI ได้ไม่จำกัด (ระบบอยู่ระหว่างจำกัดโควตา Token)",
                 "user_tier": current_user.subscription_tier,
                 "ai_queries_count": current_user.ai_queries_count
             }
