@@ -27,8 +27,9 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend application
+# Copy backend application and ephemeris tables
 COPY backend/ ./backend/
+COPY ephe/ ./ephe/
 
 # Copy built frontend assets to the directory mounted in backend/main.py
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
@@ -39,5 +40,5 @@ EXPOSE 8000
 ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
 
-# Command to run uvicorn
-CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT}"]
+# Command to run uvicorn (exec form with shell expansion for PORT)
+CMD ["sh", "-c", "exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

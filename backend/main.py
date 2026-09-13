@@ -97,6 +97,13 @@ PRESET_CITIES = [
 ]
 
 
+@app.get("/api/health")
+@app.get("/healthz")
+def health_check():
+    """Health check endpoint for container orchestrators (Railway, Render, K8s)."""
+    return {"status": "ok", "service": "solarian-astrology-engine"}
+
+
 @app.get("/api/cities")
 def get_cities():
     """Returns list of preset major cities with coordinates and timezones."""
