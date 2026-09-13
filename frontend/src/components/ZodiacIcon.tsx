@@ -46,7 +46,8 @@ export const ZodiacIcon: React.FC<ZodiacIconProps> = ({
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`inline-block shrink-0 select-none ${className}`}
+      style={{ width: `${size}px`, height: `${size}px`, minWidth: `${size}px`, minHeight: `${size}px` }}
+      className={`sj-zodiac-icon inline-block shrink-0 select-none ${className}`}
     >
       {key === 'aries' && (
         <path d="M12 21V9m0 0C10.5 5.5 7 5 4.5 7.5S4 12 6.5 12m5.5-3c1.5-3.5 5-4 7.5-1.5s.5 4.5-2 4.5" />

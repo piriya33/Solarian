@@ -29,9 +29,13 @@ export const NatalWheel: React.FC<NatalWheelProps> = ({
   chart,
   selectedPlanet,
   onSelectPlanet,
-  theme = 'dark',
+  theme = 'light',
 }) => {
-  const isDark = theme !== 'light';
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>(theme);
+  React.useEffect(() => {
+    setCurrentTheme(theme);
+  }, [theme]);
+  const isDark = currentTheme !== 'light';
   const [hoveredPlanet, setHoveredPlanet] = useState<PlanetData | null>(null);
   const [hoveredHouse, setHoveredHouse] = useState<number | null>(null);
   const [selectedHouse, setSelectedHouse] = useState<number | null>(null);
@@ -139,6 +143,15 @@ export const NatalWheel: React.FC<NatalWheelProps> = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setCurrentTheme(isDark ? 'light' : 'dark')}
+            className="px-2 py-1 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1 cursor-pointer bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+            title="สลับโหมดสีวงล้อ (สว่าง / มืด)"
+          >
+            <span>{isDark ? '☀️ สว่าง' : '🌙 มืด'}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setShowDegrees(!showDegrees)}
             className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1 cursor-pointer ${
               showDegrees
@@ -222,7 +235,8 @@ export const NatalWheel: React.FC<NatalWheelProps> = ({
       <div className="relative w-full max-w-[620px] aspect-square flex items-center justify-center my-1">
         <svg
           viewBox={`0 0 ${size} ${size}`}
-          className="w-full h-full select-none drop-shadow-xl dark:drop-shadow-2xl overflow-visible"
+          className="sj-chart-wheel-svg sj-chart-svg w-full h-full select-none drop-shadow-xl dark:drop-shadow-2xl overflow-visible"
+          style={{ width: "100%", height: "100%", maxWidth: "620px", maxHeight: "620px", display: "block" }}
         >
           <defs>
             <radialGradient id="centerWheelGlow" cx="50%" cy="50%" r="50%">

@@ -1131,6 +1131,8 @@ export function SolarianJourney() {
                 onSwitchToAi={() => changePage("ai")}
                 onExportPdf={exportPdf}
                 isExporting={exporting}
+                selectedPlanet={selectedPlanet}
+                onSelectPlanet={setSelectedPlanet}
               />
             </section>
           )}
@@ -1173,7 +1175,7 @@ export function SolarianJourney() {
                     <h2>วงล้อดวงกำเนิด พลาซีดัส</h2>
                   </div>
                 </div>
-                <NatalWheel chart={data.chart} selectedPlanet={selectedPlanet} onSelectPlanet={setSelectedPlanet} theme="dark" />
+                <NatalWheel chart={data.chart} selectedPlanet={selectedPlanet} onSelectPlanet={setSelectedPlanet} theme="light" />
               </section>
 
               {/* 2. 108-Year Life Map & True Solar Arc 30° harmonic triggers */}

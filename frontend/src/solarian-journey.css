@@ -24,7 +24,35 @@
 .sj-app p { line-height: 1.8; }
 .sj-app em { color: var(--sj-coral); font-style: normal; }
 .sj-app small { color: var(--sj-muted); line-height: 1.6; }
-.sj-app svg { width: 1.1rem; height: 1.1rem; flex: none; }
+.sj-app svg:not(.sj-chart-wheel-svg):not(.sj-chart-svg):not([viewBox="0 0 760 760"]):not(.sj-zodiac-icon) {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: none;
+}
+
+/* Placidus Natal Chart Wheel & Vector Charts - Never Squash */
+.sj-chart-wheel-svg,
+.sj-chart-svg,
+.sj-app svg.sj-chart-wheel-svg,
+.sj-app svg.sj-chart-svg,
+.sj-app svg[viewBox="0 0 760 760"] {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 620px !important;
+  max-height: 620px !important;
+  aspect-ratio: 1 / 1 !important;
+  display: block !important;
+  flex: 1 1 auto !important;
+  overflow: visible !important;
+}
+
+/* Vector Zodiac Icons - preserve specified dimensions */
+.sj-zodiac-icon,
+.sj-app svg.sj-zodiac-icon {
+  display: inline-block !important;
+  flex: none !important;
+  flex-shrink: 0 !important;
+}
 
 .sj-skip { position: fixed; left: 18px; top: -100px; z-index: 100; padding: 12px 16px; border-radius: 14px; background: var(--sj-raised); color: var(--sj-ink); box-shadow: var(--sj-shadow); }
 .sj-skip:focus { top: 14px; }
@@ -311,11 +339,8 @@
 .sj-legacy-tools { display: grid; min-width: 0; max-width: 100%; gap: 24px; margin-top: 28px; overflow: hidden; --color-slate-950: #314139; --color-slate-900: #38483f; --color-slate-800: #465f4e; --color-slate-700: #52675a; --color-slate-600: #665c50; --color-slate-500: #756c60; --color-slate-400: #8a8073; --color-slate-300: #b9aa95; --color-slate-200: #d8c8ae; --color-slate-100: #f0e8da; --color-white: #fffdf8; }
 .sj-legacy-tools > *, .sj-legacy-tools .bg-white\/90 { border-radius: 24px !important; box-shadow: var(--sj-shadow) !important; }
 .sj-legacy-tools > * { min-width: 0; max-width: 100%; }
-.sj-legacy-tools .overflow-x-auto { max-width: 100%; overscroll-behavior-inline: contain; }
-.sj-legacy-tools svg { max-width: 100%; overflow: hidden !important; }
-.sj-legacy-tools svg[viewBox="0 0 760 760"] { width: 100%; height: 100%; }
-.sj-legacy-tools svg [fill="#0f172a"], .sj-legacy-tools svg [fill="#0b1120"], .sj-legacy-tools svg [fill="#080c18"], .sj-legacy-tools svg [fill="#050811"], .sj-legacy-tools svg [fill="#04060d"], .sj-legacy-tools svg [fill="#1e293b"] { fill: var(--sj-ink) !important; }
-.sj-legacy-tools svg [stroke="#0f172a"], .sj-legacy-tools svg [stroke="#0b1120"], .sj-legacy-tools svg [stroke="#080c18"], .sj-legacy-tools svg [stroke="#050811"], .sj-legacy-tools svg [stroke="#04060d"], .sj-legacy-tools svg [stroke="#1e293b"] { stroke: var(--sj-jade-deep) !important; }
+.sj-legacy-tools svg { max-width: 100%; }
+.sj-legacy-tools svg[viewBox="0 0 760 760"] { width: 100%; height: 100%; aspect-ratio: 1 / 1; }
 
 .sj-footer { display: flex; justify-content: space-between; gap: 25px; padding: 26px max(28px, calc((100vw - 1280px) / 2)); border-top: 1px solid var(--sj-line); color: var(--sj-muted); font-size: .72rem; line-height: 1.7; }
 

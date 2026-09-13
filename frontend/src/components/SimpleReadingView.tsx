@@ -1,6 +1,7 @@
 import React from "react";
 import type { ApiResponse } from "../types";
 import { ZodiacIcon } from "./ZodiacIcon";
+import { NatalWheel } from "./NatalWheel";
 import {
   Sun,
   Moon,
@@ -27,6 +28,8 @@ interface SimpleReadingViewProps {
   onSwitchToAi?: () => void;
   onExportPdf: () => void;
   isExporting?: boolean;
+  selectedPlanet?: string | null;
+  onSelectPlanet?: (name: string | null) => void;
 }
 
 export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
@@ -36,6 +39,8 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
   onSwitchToAi,
   onExportPdf,
   isExporting = false,
+  selectedPlanet = null,
+  onSelectPlanet = () => {},
 }) => {
   const { chart, trinity, timeline } = data;
   const birthDate = chart.metadata.birth_date;
@@ -123,101 +128,133 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
         </div>
       </section>
 
-      {/* 2. The Big Three: Core Identity Pillars */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* 2. Placidus Natal Chart Wheel & The Core Trinity */}
+      <section className="space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-              3 แก่นแท้แห่งตัวตน (The Core Trinity)
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/50 text-amber-900 dark:text-amber-300 text-xs font-bold mb-1">
+              <Compass className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>แผนที่ดวงกำเนิดและ 3 แก่นแท้แห่งตัวตน (Placidus Natal Chart & The Core Trinity)</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">
+              วงล้อดวงกำเนิดพลาซีดัส และ 3 แก่นแท้แห่งตัวตน
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              องค์ประกอบหลัก 3 มิติที่กำหนดพฤติกรรม จิตวิญญาณ และเส้นทางชีวิต
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              ผูกดวงตามระบบพลาซีดัสมาตรฐานดาราศาสตร์สากล (DE431) แสดงลัคนา (AC) ทิศตะวันออก (ซ้าย) เมริเดียนฟ้า (MC) ด้านบนสุด พร้อมแก่นแท้ อาทิตย์ จันทร์ และลัคนา
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Sun Card */}
-          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-4">
-              <Sun className="w-5 h-5" />
-            </div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                ดวงอาทิตย์ (Sun)
-              </span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">• ตัวตนที่แท้จริง</span>
-            </div>
-            <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <ZodiacIcon sign={chart.planets_dict.Sun.sign_thai} size={20} />
-              <span>ราศี{chart.planets_dict.Sun.sign_thai}</span>
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              ภพที่ {chart.planets_dict.Sun.house} • {sunInfo.dignity || "มาตรฐานพลังงานเฉพาะตัว"}
-            </p>
-            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-2">
-              <p>
-                <b>แก่นจิตวิญญาณ:</b> {sunInfo.core_nature || "มุ่งมั่นสร้างผลงานที่มีคุณค่า มีพลังแห่งการเป็นผู้นำและการริเริ่มสร้างสรรค์"}
-              </p>
-              <p className="text-slate-500 dark:text-slate-400">
-                <b>พื้นที่เฉิดฉาย:</b> {sunInfo.house_theme || "เน้นความสำเร็จและผลงานเชิงประจักษ์"}
-              </p>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left / Main: Interactive Placidus Natal Wheel Card */}
+          <div className="lg:col-span-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-sm flex flex-col items-center">
+            <NatalWheel
+              chart={chart}
+              selectedPlanet={selectedPlanet}
+              onSelectPlanet={onSelectPlanet}
+              theme="light"
+            />
           </div>
 
-          {/* Moon Card */}
-          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4">
-              <Moon className="w-5 h-5" />
-            </div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                ดวงจันทร์ (Moon)
-              </span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">• โลกภายใน & อารมณ์</span>
-            </div>
-            <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <ZodiacIcon sign={chart.planets_dict.Moon.sign_thai} size={20} />
-              <span>ราศี{chart.planets_dict.Moon.sign_thai}</span>
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              ภพที่ {chart.planets_dict.Moon.house} • {moonInfo.dignity || "สัญชาตญาณความรู้สึก"}
-            </p>
-            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-2">
-              <p>
-                <b>ความปลอดภัยทางใจ:</b> {moonInfo.emotional_instinct || "ต้องการความสงบ ความเข้าใจ และบรรยากาศที่เกื้อหนุนความรู้สึก"}
+          {/* Right: The 3 Core Trinity Cards */}
+          <div className="lg:col-span-5 flex flex-col gap-4">
+            {/* Sun Card */}
+            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Sun className="w-5 h-5" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                    ดวงอาทิตย์ (Sun)
+                  </span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">• ตัวตนที่แท้จริง</span>
+                </div>
+              </div>
+              <h4 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <ZodiacIcon sign={chart.planets_dict.Sun.sign_thai} size={20} />
+                <span>ราศี{chart.planets_dict.Sun.sign_thai}</span>
+                <span className="text-xs font-normal text-slate-500 dark:text-slate-400 font-mono">
+                  ({chart.planets_dict.Sun.degrees}°{chart.planets_dict.Sun.minutes}')
+                </span>
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                ภพที่ {chart.planets_dict.Sun.house} • {sunInfo.dignity || "มาตรฐานพลังงานเฉพาะตัว"}
               </p>
-              <p className="text-slate-500 dark:text-slate-400">
-                <b>ปฏิกิริยาอัตโนมัติ:</b> ละเอียดอ่อนต่อบรรยากาศรอบข้าง ไวต่อการรับรู้ความจริงใจ
-              </p>
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-1.5">
+                <p>
+                  <b>แก่นจิตวิญญาณ:</b> {sunInfo.core_nature || "มุ่งมั่นสร้างผลงานที่มีคุณค่า มีพลังแห่งการเป็นผู้นำและการริเริ่มสร้างสรรค์"}
+                </p>
+                <p className="text-slate-500 dark:text-slate-400">
+                  <b>พื้นที่เฉิดฉาย:</b> {sunInfo.house_theme || "เน้นความสำเร็จและผลงานเชิงประจักษ์"}
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* Ascendant Card */}
-          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center mb-4">
-              <Compass className="w-5 h-5" />
-            </div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                ลัคนา (Rising / AC)
-              </span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">• บุคลิกภาพด่านหน้า</span>
-            </div>
-            <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <ZodiacIcon sign={chart.angles.Ascendant.sign_thai} size={20} />
-              <span>ราศี{chart.angles.Ascendant.sign_thai}</span>
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              องศา {chart.angles.Ascendant.degrees}° {chart.angles.Ascendant.minutes}&apos; • ประตูดวงชะตา
-            </p>
-            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-2">
-              <p>
-                <b>ภาพลักษณ์ที่คนสัมผัส:</b> {ascInfo.outward_persona || "มีบุคลิกที่น่าเชื่อถือ มีสายตาที่มุ่งมั่นและท่าทีที่เป็นมิตร"}
+            {/* Moon Card */}
+            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <Moon className="w-5 h-5" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                    ดวงจันทร์ (Moon)
+                  </span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">• โลกภายใน & อารมณ์</span>
+                </div>
+              </div>
+              <h4 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <ZodiacIcon sign={chart.planets_dict.Moon.sign_thai} size={20} />
+                <span>ราศี{chart.planets_dict.Moon.sign_thai}</span>
+                <span className="text-xs font-normal text-slate-500 dark:text-slate-400 font-mono">
+                  ({chart.planets_dict.Moon.degrees}°{chart.planets_dict.Moon.minutes}')
+                </span>
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                ภพที่ {chart.planets_dict.Moon.house} • {moonInfo.dignity || "สัญชาตญาณความรู้สึก"}
               </p>
-              <p className="text-slate-500 dark:text-slate-400">
-                <b>แนวทางชีวิต:</b> ขับเคลื่อนด้วยเป้าหมายและพัฒนาตนเองอย่างต่อเนื่อง
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-1.5">
+                <p>
+                  <b>ความปลอดภัยทางใจ:</b> {moonInfo.emotional_instinct || "ต้องการความสงบ ความเข้าใจ และบรรยากาศที่เกื้อหนุนความรู้สึก"}
+                </p>
+                <p className="text-slate-500 dark:text-slate-400">
+                  <b>ปฏิกิริยาอัตโนมัติ:</b> ละเอียดอ่อนต่อบรรยากาศรอบข้าง ไวต่อการรับรู้ความจริงใจ
+                </p>
+              </div>
+            </div>
+
+            {/* Ascendant Card */}
+            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                    ลัคนา (Rising / AC)
+                  </span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">• บุคลิกภาพด่านหน้า</span>
+                </div>
+              </div>
+              <h4 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <ZodiacIcon sign={chart.angles.Ascendant.sign_thai} size={20} />
+                <span>ราศี{chart.angles.Ascendant.sign_thai}</span>
+                <span className="text-xs font-normal text-slate-500 dark:text-slate-400 font-mono">
+                  ({chart.angles.Ascendant.degrees}°{chart.angles.Ascendant.minutes}')
+                </span>
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                องศา {chart.angles.Ascendant.degrees}° {chart.angles.Ascendant.minutes}&apos; • ประตูดวงชะตา
               </p>
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-1.5">
+                <p>
+                  <b>ภาพลักษณ์ที่คนสัมผัส:</b> {ascInfo.outward_persona || "มีบุคลิกที่น่าเชื่อถือ มีสายตาที่มุ่งมั่นและท่าทีที่เป็นมิตร"}
+                </p>
+                <p className="text-slate-500 dark:text-slate-400">
+                  <b>แนวทางชีวิต:</b> ขับเคลื่อนด้วยเป้าหมายและพัฒนาตนเองอย่างต่อเนื่อง
+                </p>
+              </div>
             </div>
           </div>
         </div>
