@@ -104,6 +104,24 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
     (r) => r.planet_num === currentYearData?.annual_thaksa?.num
   );
 
+  const majorPlanetKey =
+    currentYearData?.major_planet?.name === "Rahu"
+      ? "True Node"
+      : (currentYearData?.major_planet?.name || "Sun");
+  const majorNatalPlanet =
+    chart.planets_dict[majorPlanetKey] ||
+    (currentYearData?.major_planet?.name
+      ? chart.planets_dict[currentYearData.major_planet.name]
+      : null) ||
+    chart.planets_dict["Sun"];
+
+  const sunriseDisplay =
+    dayResult?.sunrise_time ||
+    (chart.metadata.sunrise_local ? chart.metadata.sunrise_local.slice(0, 5) : "--:--");
+  const sunsetDisplay =
+    dayResult?.sunset_time ||
+    (chart.metadata.sunset_local ? chart.metadata.sunset_local.slice(0, 5) : "--:--");
+
   const synergyDynamic =
     subDetail?.synergy_dynamic ||
     "การผสานพลังงานดำเนินไปตามปกติ ความสำเร็จขึ้นอยู่กับวินัยและการลงมือทำอย่างสม่ำเสมอ";
@@ -219,8 +237,8 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
             </p>
 
             <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
-              <p>☀️ พระอาทิตย์ขึ้น: <strong>{chart.metadata.sunrise_local} น.</strong></p>
-              <p>🌙 พระอาทิตย์ตก: <strong>{chart.metadata.sunset_local} น.</strong></p>
+              <p>☀️ พระอาทิตย์ขึ้น: <strong>{sunriseDisplay} น.</strong></p>
+              <p>🌙 พระอาทิตย์ตก: <strong>{sunsetDisplay} น.</strong></p>
               <p>👑 ดาวครองวัน: <strong>พระ{dayResult?.planet_thai}</strong> (กำลัง {dayResult?.period_years} ปี / ภูมิบริวารเดิม)</p>
             </div>
           </div>
@@ -291,7 +309,7 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
                 🏛️ ธีมยุค: <strong>{macroDetail?.epoch_theme || reading?.macro_narrative || "ยุคแห่งการสร้างรากฐาน"}</strong>
               </p>
               <p>
-                📍 ดวงเดิม: สถิตภพที่ {chart.planets_dict[currentYearData?.major_planet.name || 'Sun']?.house || 1} ({chart.planets_dict[currentYearData?.major_planet.name || 'Sun']?.sign_thai || ''})
+                📍 ดวงเดิม: สถิตภพที่ {majorNatalPlanet?.house || 1} ({majorNatalPlanet?.sign_thai || ''})
               </p>
             </div>
           </div>

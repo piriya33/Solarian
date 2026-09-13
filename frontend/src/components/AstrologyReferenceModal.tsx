@@ -155,13 +155,17 @@ export const AstrologyReferenceModal: React.FC<AstrologyReferenceModalProps> = (
   const [elementFilter, setElementFilter] = useState<string>("all");
 
   React.useEffect(() => {
+    if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-    }
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -209,40 +213,40 @@ export const AstrologyReferenceModal: React.FC<AstrologyReferenceModalProps> = (
         </div>
 
         {/* Primary Tabs */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 px-6 pt-2">
+        <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 px-4 sm:px-6 pt-2 gap-1 sm:gap-2">
           <button
             onClick={() => setActiveTab("pairs")}
-            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors whitespace-nowrap shrink-0 ${
               activeTab === "pairs"
                 ? "border-amber-600 text-amber-700 dark:border-amber-400 dark:text-amber-300 bg-white dark:bg-slate-900 rounded-t-xl"
                 : "border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             }`}
           >
-            <Users className="w-4 h-4 text-amber-500" />
+            <Users className="w-4 h-4 text-amber-500 shrink-0" />
             <span>ตารางคู่ดาว (คู่มิตร / ศัตรู / สมพล / ธาตุ)</span>
           </button>
 
           <button
             onClick={() => setActiveTab("zodiac")}
-            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors whitespace-nowrap shrink-0 ${
               activeTab === "zodiac"
                 ? "border-amber-600 text-amber-700 dark:border-amber-400 dark:text-amber-300 bg-white dark:bg-slate-900 rounded-t-xl"
                 : "border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             }`}
           >
-            <Sparkles className="w-4 h-4 text-sky-500" />
+            <Sparkles className="w-4 h-4 text-sky-500 shrink-0" />
             <span>ตาราง 12 ราศี & ดาวเกษตร</span>
           </button>
 
           <button
             onClick={() => setActiveTab("thaksa")}
-            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-colors whitespace-nowrap shrink-0 ${
               activeTab === "thaksa"
                 ? "border-amber-600 text-amber-700 dark:border-amber-400 dark:text-amber-300 bg-white dark:bg-slate-900 rounded-t-xl"
                 : "border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             }`}
           >
-            <Compass className="w-4 h-4 text-emerald-500" />
+            <Compass className="w-4 h-4 text-emerald-500 shrink-0" />
             <span>ภูมิทักษา 8 ภูมิ (บริวาร ถึง กาลกิณี)</span>
           </button>
         </div>

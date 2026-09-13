@@ -1116,7 +1116,7 @@ export function SolarianJourney() {
                       type="button"
                       className="sj-button sj-quiet"
                       onClick={() => setIsRefModalOpen(true)}
-                      style={{ fontSize: "11px", padding: "3px 8px", height: "auto", cursor: "pointer" }}
+                      style={{ fontSize: "11px", padding: "4px 10px", minHeight: "30px", height: "auto", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
                     >
                       <BookOpen aria-hidden="true" style={{ width: "12px", height: "12px" }} />
                       ตารางอ้างอิงโหราศาสตร์ (Ref)
