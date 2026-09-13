@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Solarian Thai";
+  src: url("/assets/NotoSansThai.ttf") format("truetype");
+  font-display: swap;
+}
+
+:root {
+  font-family: "Solarian Thai", Tahoma, sans-serif;
+  color: #38483f;
+  background: #f7f1e5;
+  font-synthesis: none;
+  color-scheme: light;
+  --bg-main: #f7f1e5;
+  --bg-surface: #fff9ef;
+  --bg-card: #fffdf8;
+  --bg-card-subtle: #e8eee5;
+  --border-card: #d8c8ae;
+  --border-subtle: #e7dbc8;
+  --text-primary: #38483f;
+  --text-secondary: #665c50;
+  --text-muted: #756c60;
+  --accent-gold: #a87a36;
+  --accent-cyan: #5f795f;
+  --wheel-bg: #fffdf8;
+  --wheel-inner: #f7f1e5;
+  --wheel-ring: #d8c8ae;
+  --wheel-line: #8b927f;
+  --shadow-card: 0 14px 34px rgba(75, 89, 73, 0.13), 0 2px 6px rgba(111, 81, 48, 0.08);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; background: var(--bg-main); color: var(--text-primary); }
+button, input, select, textarea { font: inherit; }
+button, summary { cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 3px solid #a14e36;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}

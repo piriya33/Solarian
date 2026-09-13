@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  solarian:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: solarian-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/data/solarian.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@solarian.space}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change_this_to_a_random_secure_key}
+      - SOLARIAN_ENCRYPTION_KEY=${SOLARIAN_ENCRYPTION_KEY:-}
+    volumes:
+      - solarian_data:/app/data
+
+volumes:
+  solarian_data:
+    driver: local
