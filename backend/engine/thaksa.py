@@ -35,25 +35,47 @@ THAKSA_ROLES = [
 ]
 
 
-def determine_astrological_day(birth_date: str, birth_time: str, sunrise_time: str = "06:00:00") -> Dict[str, Any]:
+CIVIL_DAY_NAMES = {
+    0: "วันจันทร์",
+    1: "วันอังคาร",
+    2: "วันพุธ",
+    3: "วันพฤหัสบดี",
+    4: "วันศุกร์",
+    5: "วันเสาร์",
+    6: "วันอาทิตย์",
+}
+
+
+def determine_astrological_day(
+    birth_date: str,
+    birth_time: str,
+    sunrise_time: str = "06:00:00",
+    sunset_time: str = "18:00:00"
+) -> Dict[str, Any]:
     """
-    Determines the astrological birth day accounting for the sunrise cutoff rule.
-    Calendar day (0=Monday, 1=Tuesday, 2=Wednesday, 3=Thursday, 4=Friday, 5=Saturday, 6=Sunday).
-    If birth_time < sunrise_time, astrological day is shifted to the previous day!
-    Wednesday night (18:00 to next sunrise) can be designated as Rahu (8) in Thai tradition.
+    Determines the astrological birth day accounting for the sunrise & sunset cutoff rules:
+    - Traditional Thai astrology changes the day at Sunrise (พระอาทิตย์ขึ้น), not midnight (00:00).
+    - If birth_time < sunrise_time: The day shifts back to the previous day.
+      * If previous day was Wednesday: Wednesday night (sunset on Wed to sunrise on Thu) is พระราหู (๘ / วันพุธกลางคืน).
+      * If previous day was Sun(1), Mon(2), Tue(3), Thu(5), Fri(6), Sat(7).
+    - If birth_time >= sunrise_time: The day is on the civil birth date.
+      * If birth_date is Wednesday:
+        - birth_time < sunset_time: วันพุธกลางวัน (พระพุธ ๔)
+        - birth_time >= sunset_time: วันพุธกลางคืน (พระราหู ๘)
+      * If other days: Sun(1), Mon(2), Tue(3), Thu(5), Fri(6), Sat(7).
     """
     dt_birth = datetime.strptime(f"{birth_date} {birth_time[:5]}", "%Y-%m-%d %H:%M")
     dt_sunrise = datetime.strptime(f"{birth_date} {sunrise_time[:5]}", "%Y-%m-%d %H:%M")
+    dt_sunset = datetime.strptime(f"{birth_date} {sunset_time[:5]}", "%Y-%m-%d %H:%M")
 
     cal_weekday = dt_birth.weekday()  # Monday=0, Sunday=6
     is_before_sunrise = dt_birth < dt_sunrise
 
     # Map Python weekday (0=Mon...6=Sun) to Thai Thaksa number:
-    # Mon=2, Tue=3, Wed=4, Thu=5, Fri=6, Sat=7, Sun=1
     weekday_to_thaksa = {
         0: 2,  # Monday
         1: 3,  # Tuesday
-        2: 4,  # Wednesday
+        2: 4,  # Wednesday (Daytime)
         3: 5,  # Thursday
         4: 6,  # Friday
         5: 7,  # Saturday
@@ -61,21 +83,57 @@ def determine_astrological_day(birth_date: str, birth_time: str, sunrise_time: s
     }
 
     if is_before_sunrise:
-        # Shift back 1 day
+        # Before sunrise: Belong to previous civil day!
         prev_dt = dt_birth - timedelta(days=1)
-        thaksa_num = weekday_to_thaksa[prev_dt.weekday()]
+        prev_weekday = prev_dt.weekday()
         effective_date = prev_dt.strftime("%Y-%m-%d")
-        reason = f"เกิดก่อนเวลาพระอาทิตย์ขึ้น ({sunrise_time[:5]} น.) จึงนับเป็นวันก่อนหน้า"
-    else:
-        # If Wednesday and born between 18:00 and next sunrise, optionally Rahu (8)
-        # Traditionally Wednesday night is Rahu, but daytime Wednesday is Mercury (4)
-        thaksa_num = weekday_to_thaksa[cal_weekday]
-        if cal_weekday == 2 and dt_birth.hour >= 18:
-            thaksa_num = 8  # Wednesday night / Rahu
-            reason = "เกิดวันพุธหลังเวลา 18:00 น. จัดเป็นพุธกลางคืน (พระราหู)"
+
+        if prev_weekday == 2:
+            # Civil date is Thursday, but born before sunrise -> Born during Wednesday night (Rahu 8)!
+            thaksa_num = 8
+            is_rahu_night = True
+            reason = (
+                f"เกิดเช้าตรู่วันพฤหัสบดี ({birth_time[:5]} น.) ก่อนเวลาพระอาทิตย์ขึ้น ({sunrise_time[:5]} น.) "
+                f"ตามหลักโหราศาสตร์ไทยจึงนับเป็นช่วงคืนวันพุธหลังพระอาทิตย์ตก จัดเป็น 'วันพุธกลางคืน (พระราหู ๘)'"
+            )
         else:
-            effective_date = birth_date
-            reason = f"เกิดหลังเวลาพระอาทิตย์ขึ้น ({sunrise_time[:5]} น.) ตามหลักสุริยคติ"
+            thaksa_num = weekday_to_thaksa[prev_weekday]
+            is_rahu_night = False
+            civil_day = CIVIL_DAY_NAMES[cal_weekday]
+            prev_day_name = PLANET_INFO[thaksa_num]["day_name"]
+            reason = (
+                f"เกิดเช้าตรู่{civil_day} ({birth_time[:5]} น.) ก่อนเวลาพระอาทิตย์ขึ้น ({sunrise_time[:5]} น.) "
+                f"ตามหลักโหราศาสตร์ไทยวันใหม่จะเริ่มเมื่อพระอาทิตย์ขึ้น จึงนับเป็น '{prev_day_name}'"
+            )
+    else:
+        # After sunrise: Belongs to current civil day
+        effective_date = birth_date
+        civil_day = CIVIL_DAY_NAMES[cal_weekday]
+
+        if cal_weekday == 2:
+            # Wednesday: check sunset cutoff
+            if dt_birth >= dt_sunset:
+                thaksa_num = 8  # Wednesday night / Rahu
+                is_rahu_night = True
+                reason = (
+                    f"เกิดวันพุธ ({birth_time[:5]} น.) หลังเวลาพระอาทิตย์ตก ({sunset_time[:5]} น.) "
+                    f"ตามหลักโหราศาสตร์ไทยจัดเป็น 'วันพุธกลางคืน (พระราหู ๘)'"
+                )
+            else:
+                thaksa_num = 4  # Wednesday daytime / Mercury
+                is_rahu_night = False
+                reason = (
+                    f"เกิดวันพุธ ({birth_time[:5]} น.) ระหว่างพระอาทิตย์ขึ้น ({sunrise_time[:5]} น.) "
+                    f"ถึงพระอาทิตย์ตก ({sunset_time[:5]} น.) จัดเป็น 'วันพุธกลางวัน (พระพุธ ๔)'"
+                )
+        else:
+            thaksa_num = weekday_to_thaksa[cal_weekday]
+            is_rahu_night = False
+            astro_day = PLANET_INFO[thaksa_num]["day_name"]
+            reason = (
+                f"เกิด{civil_day} ({birth_time[:5]} น.) หลังเวลาพระอาทิตย์ขึ้น ({sunrise_time[:5]} น.) "
+                f"จึงนับเป็น '{astro_day}'"
+            )
 
     p_info = PLANET_INFO[thaksa_num]
 
@@ -84,8 +142,15 @@ def determine_astrological_day(birth_date: str, birth_time: str, sunrise_time: s
         "planet_name": p_info["name"],
         "planet_thai": p_info["thai"],
         "day_name": p_info["day_name"],
+        "astro_day_thai": p_info["day_name"],
+        "civil_weekday_thai": CIVIL_DAY_NAMES[cal_weekday],
+        "civil_date": birth_date,
+        "effective_date": effective_date,
         "period_years": p_info["period_years"],
         "is_before_sunrise": is_before_sunrise,
+        "is_rahu_night": is_rahu_night,
+        "sunrise_time": sunrise_time[:5],
+        "sunset_time": sunset_time[:5],
         "reason": reason
     }
 
@@ -404,3 +469,10 @@ def calculate_108_timeline(
         "sun_speed": degree_triggers_info.get("sun_speed", 1.0),
         "years_map": years_map
     }
+
+
+def get_astrology_reference_tables() -> Dict[str, Any]:
+    """Returns standardized reference tables for Zodiac signs, Thai planetary pairs, and Thaksa roles."""
+    from backend.engine.reference_data import get_all_reference_tables
+    return get_all_reference_tables()
+

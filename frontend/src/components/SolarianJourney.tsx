@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   CalendarDays,
   ChevronDown,
   CircleAlert,
@@ -25,6 +26,7 @@ import { PlanetTable } from "./PlanetTable";
 import { SimpleReadingView } from "./SimpleReadingView";
 import { AICounselorView } from "./AICounselorView";
 import { AIPaywallModal } from "./AIPaywallModal";
+import { AstrologyReferenceModal } from "./AstrologyReferenceModal";
 
 type City = { city: string; lat: number; lon: number; tz: number };
 type Page = "reading" | "pro" | "bazi" | "connections" | "ai";
@@ -759,6 +761,7 @@ export function SolarianJourney() {
   const [selectedPlanet, setSelectedPlanet] = useState<string | null>(null);
   const [triggerFilter, setTriggerFilter] = useState("all");
   const [guidanceTab, setGuidanceTab] = useState<GuidancePeriodKey>("today");
+  const [isRefModalOpen, setIsRefModalOpen] = useState(false);
   const requestRef = useRef<{ id: number; controller: AbortController } | null>(null);
   const profileSaveRef = useRef<AbortController | null>(null);
   const pendingProfileRef = useRef<BirthParams | null>(null);
@@ -1090,6 +1093,35 @@ export function SolarianJourney() {
                   <p>
                     <MapPin aria-hidden="true" /> {data.profile.location_name} · {formatThaiDate(currentParams.birth_date)} เวลา {currentParams.birth_time} · UTC {currentParams.tz_offset >= 0 ? "+" : ""}{currentParams.tz_offset}
                   </p>
+                  <div style={{ marginTop: "8px", display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+                    <span style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "4px 12px",
+                      borderRadius: "10px",
+                      background: "color-mix(in srgb, var(--sj-gold, #b45309) 14%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--sj-gold, #b45309) 35%, transparent)",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color: "var(--sj-gold-deep, #92400e)"
+                    }}>
+                      <Sparkles aria-hidden="true" style={{ width: "13px", height: "13px" }} />
+                      วันเกิดทางโหราศาสตร์: {data.day_result?.day_name || "วันอาทิตย์"} {data.day_result?.is_rahu_night ? "(พระราหู ๘)" : `(พระ${data.day_result?.planet_thai || "อาทิตย์"})`}
+                    </span>
+                    <span style={{ fontSize: "11px", color: "var(--sj-muted)" }}>
+                      ({data.day_result?.reason || "ตัดวันตามเวลาพระอาทิตย์ขึ้นจริง"})
+                    </span>
+                    <button
+                      type="button"
+                      className="sj-button sj-quiet"
+                      onClick={() => setIsRefModalOpen(true)}
+                      style={{ fontSize: "11px", padding: "3px 8px", height: "auto", cursor: "pointer" }}
+                    >
+                      <BookOpen aria-hidden="true" style={{ width: "12px", height: "12px" }} />
+                      ตารางอ้างอิงโหราศาสตร์ (Ref)
+                    </button>
+                  </div>
                 </div>
                 <div className="sj-profile-actions">
                   {profiles.length > 0 && (
@@ -1161,6 +1193,13 @@ export function SolarianJourney() {
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    className="sj-button sj-soft"
+                    onClick={() => setIsRefModalOpen(true)}
+                  >
+                    <BookOpen aria-hidden="true" /> ตารางคู่ดาว & ดาวประจำราศี (Ref)
+                  </button>
                   <button className="sj-button sj-primary" onClick={exportPdf} disabled={exporting}>
                     <Download aria-hidden="true" />{exporting ? "กำลังสร้าง PDF…" : "ดาวน์โหลด PDF รายงานเต็ม"}
                   </button>
@@ -1591,6 +1630,12 @@ export function SolarianJourney() {
           }
         }}
         currentChart={data ? currentParams : null}
+      />
+
+      <AstrologyReferenceModal
+        isOpen={isRefModalOpen}
+        onClose={() => setIsRefModalOpen(false)}
+        data={data?.reference_tables}
       />
     </div>
   );

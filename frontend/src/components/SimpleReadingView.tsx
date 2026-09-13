@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import type { ApiResponse } from "../types";
 import { ZodiacIcon } from "./ZodiacIcon";
 import { NatalWheel } from "./NatalWheel";
+import { AstrologyReferenceModal } from "./AstrologyReferenceModal";
 import {
   Sun,
   Moon,
@@ -19,6 +20,11 @@ import {
   Clock,
   MapPin,
   Target,
+  BookOpen,
+  Users,
+  Crown,
+  Flame,
+  ShieldCheck,
 } from "lucide-react";
 
 interface SimpleReadingViewProps {
@@ -86,6 +92,25 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
   const moonInfo = trinity.personality_trinity.moon;
   const ascInfo = trinity.personality_trinity.ascendant;
 
+  const [isRefModalOpen, setIsRefModalOpen] = useState(false);
+
+  const dayResult = data.day_result;
+  const majorPeriods = timeline?.major_periods || [];
+  const currentMajor =
+    majorPeriods.find((mp) => mp.start_age <= currentAge && currentAge < mp.end_age) ||
+    majorPeriods[0];
+
+  const annualRole = data.thaksa_matrix?.find(
+    (r) => r.planet_num === currentYearData?.annual_thaksa?.num
+  );
+
+  const synergyDynamic =
+    subDetail?.synergy_dynamic ||
+    "การผสานพลังงานดำเนินไปตามปกติ ความสำเร็จขึ้นอยู่กับวินัยและการลงมือทำอย่างสม่ำเสมอ";
+  const pairTitle =
+    subDetail?.catalyst_title ||
+    (synergyDynamic.includes(":") ? synergyDynamic.split(":")[0] : "จังหวะดำเนินงานตามปกติ");
+
   return (
     <div className="space-y-8 animate-fade-in pb-12">
       {/* 1. Hero Life Compass Card */}
@@ -111,24 +136,235 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
             และช่วงเวลาจังหวะชีวิตที่ทรงอิทธิพลสูงสุด
           </p>
 
-          <div className="mt-6 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            {/* Prominent Astrological Birth Day Badge */}
+            <span className="inline-flex items-center gap-1.5 bg-amber-500/15 text-amber-900 dark:text-amber-300 dark:bg-amber-950/70 px-3.5 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700/60 font-bold shadow-sm">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>
+                วันเกิดทางโหราศาสตร์: {dayResult?.day_name || "วันอาทิตย์"}
+                {dayResult?.is_rahu_night ? " (พระราหู ๘)" : ` (พระ${dayResult?.planet_thai || "อาทิตย์"})`}
+              </span>
+            </span>
+
             <span className="inline-flex items-center gap-1.5 bg-white/80 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 font-medium">
               <Calendar className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span>เกิดวันที่ {chart.metadata.birth_date}</span>
+              <span>สูติบัตร {chart.metadata.birth_date}</span>
             </span>
+
             <span className="inline-flex items-center gap-1.5 bg-white/80 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 font-medium">
               <Clock className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
               <span>เวลา {chart.metadata.birth_time} น.</span>
             </span>
+
             <span className="inline-flex items-center gap-1.5 bg-white/80 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 font-medium">
               <MapPin className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-              <span>{chart.angles.Ascendant.sign_thai} (ลัคนา)</span>
+              <span>ลัคนา{chart.angles.Ascendant.sign_thai} ({chart.angles.Ascendant.formatted_dms})</span>
             </span>
+
+            <button
+              onClick={() => setIsRefModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-amber-600 dark:hover:bg-amber-400 dark:hover:text-slate-950 font-bold transition-all shadow-sm ml-auto"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>📚 ตารางคู่ดาว & ดาวประจำราศี (Ref)</span>
+            </button>
           </div>
         </div>
       </section>
 
-      {/* 2. Placidus Natal Chart Wheel & The Core Trinity */}
+      {/* 2. 5-Point Astrological Identity Card (อัตลักษณ์โหราศาสตร์ 5 มิติ) */}
+      <section className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/50 text-amber-900 dark:text-amber-300 text-xs font-bold mb-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>บทวิเคราะห์พื้นดวงและจังหวะชีวิต 5 มิติ (5-Point Core Astrological Identity)</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">
+              โครงสร้างดวงชะตาและพลังงานขับเคลื่อนชีวิต
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              ถอดรหัสวันเกิดตามการตัดวันจริง ลัคนา สุริยราศี ดาวเสวยอายุ ดาวแทรก และคู่ดาวมิตร-ศัตรู
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsRefModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 font-bold text-xs sm:text-sm transition-all shrink-0"
+          >
+            <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span>ดูตารางคู่มิตร-ศัตรู & ราศี</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Point 1: วันเกิดทางโหราศาสตร์ */}
+          <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                <span>มิติที่ ๑: วันเกิดตามคัมภีร์</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50">
+                {dayResult?.is_rahu_night ? "พุธกลางคืน (ราหู)" : dayResult?.day_name || "วันอาทิตย์"}
+              </span>
+            </div>
+
+            <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
+              {dayResult?.day_name || "วันอาทิตย์"}
+            </h4>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {dayResult?.reason || "นับวันใหม่เมื่อพระอาทิตย์ขึ้นตามหลักโหราศาสตร์ไทย"}
+            </p>
+
+            <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+              <p>☀️ พระอาทิตย์ขึ้น: <strong>{chart.metadata.sunrise_local} น.</strong></p>
+              <p>🌙 พระอาทิตย์ตก: <strong>{chart.metadata.sunset_local} น.</strong></p>
+              <p>👑 ดาวครองวัน: <strong>พระ{dayResult?.planet_thai}</strong> (กำลัง {dayResult?.period_years} ปี / ภูมิบริวารเดิม)</p>
+            </div>
+          </div>
+
+          {/* Point 2: ลัคนาและราศีเกิด */}
+          <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Compass className="w-3.5 h-3.5 text-sky-500" />
+                <span>มิติที่ ๒: ลัคนา & ราศีแกนหลัก</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-700/50">
+                3 ขุมพลัง
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-700 dark:text-slate-300">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">ลัคนา (Ascendant):</span>
+                <span className="font-bold text-sky-700 dark:text-sky-300">
+                  ราศี{chart.angles.Ascendant.sign_thai} ({chart.angles.Ascendant.formatted_dms})
+                </span>
+              </div>
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">สุริยราศี (Sun):</span>
+                <span className="font-bold text-amber-700 dark:text-amber-300">
+                  ราศี{chart.planets_dict.Sun.sign_thai} (ภพ {chart.planets_dict.Sun.house})
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">จันทรราศี (Moon):</span>
+                <span className="font-bold text-indigo-700 dark:text-indigo-300">
+                  ราศี{chart.planets_dict.Moon.sign_thai} (ภพ {chart.planets_dict.Moon.house})
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic pt-1">
+              ลัคนาเป็นประตูดวงชะตาและบุคลิกภายนอก ส่วนสุริยราศีคือเจตจำนงแท้จริง
+            </p>
+          </div>
+
+          {/* Point 3: ดาวเสวยอายุปัจจุบัน */}
+          <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Crown className="w-3.5 h-3.5 text-purple-500" />
+                <span>มิติที่ ๓: ดาวเสวยอายุปัจจุบัน</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700/50">
+                วัย {currentAge} ปี
+              </span>
+            </div>
+
+            <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <span>ดาว{currentYearData?.major_planet.thai}</span>
+              <span className="text-sm font-mono text-purple-600 dark:text-purple-400">
+                ({currentYearData?.major_planet.symbol})
+              </span>
+            </h4>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              เสวยอายุหลัก {currentYearData?.major_duration_years} ปี (ช่วงอายุ {currentMajor?.start_age} ถึง {currentMajor?.end_age} ปี)
+            </p>
+
+            <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+              <p>
+                🏛️ ธีมยุค: <strong>{macroDetail?.epoch_theme || reading?.macro_narrative || "ยุคแห่งการสร้างรากฐาน"}</strong>
+              </p>
+              <p>
+                📍 ดวงเดิม: สถิตภพที่ {chart.planets_dict[currentYearData?.major_planet.name || 'Sun']?.house || 1} ({chart.planets_dict[currentYearData?.major_planet.name || 'Sun']?.sign_thai || ''})
+              </p>
+            </div>
+          </div>
+
+          {/* Point 4: มีอะไรทักษาจรมาเจอ (ดาวแทรก & ทักษาจร) */}
+          <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5 text-rose-500" />
+                <span>มิติที่ ๔: ดาวแทรก & ทักษาจร</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700/50">
+                อายุย่าง {currentYearData?.age_yang} ปี
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400">ดาวแทรกอายุ (ตัวเร่ง/จุดเปลี่ยน):</p>
+              <h4 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-1">
+                <span>ดาว{currentYearData?.sub_planet.thai}</span>
+                <span className="text-sm font-mono text-rose-600 dark:text-rose-400">({currentYearData?.sub_planet.symbol})</span>
+              </h4>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+              <p>
+                🎯 <strong>ทักษาจรประจำปี:</strong> ดาว{currentYearData?.annual_thaksa.thai} ({currentYearData?.annual_thaksa.symbol})
+              </p>
+              <p>
+                🧭 <strong>ตกภูมิ:</strong> <span className="font-bold text-amber-700 dark:text-amber-400">ภูมิ{annualRole?.role_thai || "จร"}</span> ({annualRole?.role_desc || "ส่งอิทธิพลต่อผลงานและความเคลื่อนไหวในรอบปี"})
+              </p>
+            </div>
+          </div>
+
+          {/* Point 5: เป็นคู่มิตร ศัตรูกันอย่างไร (Planetary Dynamics) - spans 2 cols on lg */}
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50/50 via-white to-amber-50/20 dark:from-slate-800/90 dark:to-slate-900 border border-amber-200/80 dark:border-amber-500/30 md:col-span-2 lg:col-span-2 space-y-3 relative overflow-hidden shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>มิติที่ ๕: พลวัตคู่ดาว (คู่มิตร / ศัตรู / สมพล / ธาตุ)</span>
+              </span>
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/50">
+                {pairTitle}
+              </span>
+            </div>
+
+            <div>
+              <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
+                ความสัมพันธ์ระหว่าง ดาวเสวยอายุ ({currentYearData?.major_planet.thai}) กับ ดาวแทรก ({currentYearData?.sub_planet.thai})
+              </h4>
+              <p className="mt-1.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                {synergyDynamic}
+              </p>
+            </div>
+
+            {subDetail?.window_opportunity && (
+              <div className="pt-2.5 border-t border-amber-200/70 dark:border-slate-700 text-xs text-emerald-800 dark:text-emerald-300 font-medium flex items-start gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <span><strong>จังหวะทองและคานงัด:</strong> {subDetail.window_opportunity}</span>
+              </div>
+            )}
+
+            {subDetail?.immediate_caution && (
+              <div className="text-xs text-rose-800 dark:text-rose-300 font-medium flex items-start gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                <span><strong>ข้อควรระมัดระวัง:</strong> {subDetail.immediate_caution}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Placidus Natal Chart Wheel & The Core Trinity */}
       <section className="space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
@@ -523,6 +759,13 @@ export const SimpleReadingView: React.FC<SimpleReadingViewProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Astrology Reference Modal (ตารางคู่ดาว & ดาวประจำราศี) */}
+      <AstrologyReferenceModal
+        isOpen={isRefModalOpen}
+        onClose={() => setIsRefModalOpen(false)}
+        data={data.reference_tables}
+      />
     </div>
   );
 };

@@ -27,7 +27,12 @@ from backend.auth import (
 )
 
 from backend.engine.ephemeris import calculate_chart, ensure_ephe_configured
-from backend.engine.thaksa import determine_astrological_day, calculate_thaksa_matrix, calculate_108_timeline
+from backend.engine.thaksa import (
+    determine_astrological_day,
+    calculate_thaksa_matrix,
+    calculate_108_timeline,
+    get_astrology_reference_tables
+)
 from backend.engine.transits import build_108_transits_map
 from backend.engine.interpretation import (
     analyze_natal_chart,
@@ -144,7 +149,8 @@ def calculate_astrology(req: ChartRequest):
         )
 
         sunrise_time = chart["metadata"]["sunrise_local"]
-        day_res = determine_astrological_day(req.birth_date, req.birth_time, sunrise_time)
+        sunset_time = chart["metadata"].get("sunset_local", "18:00:00")
+        day_res = determine_astrological_day(req.birth_date, req.birth_time, sunrise_time, sunset_time)
         matrix = calculate_thaksa_matrix(day_res["thaksa_num"])
         timeline = calculate_108_timeline(req.birth_date, day_res["thaksa_num"], chart["planets_dict"])
         transits_map = build_108_transits_map(chart)
@@ -181,6 +187,7 @@ def calculate_astrology(req: ChartRequest):
             "aspect_dynamics": aspect_dynamics,
             "bazi": bazi,
             "guidance": build_practical_guidance(chart, timeline, req.reference_date.isoformat()),
+            "reference_tables": get_astrology_reference_tables(),
         }
     except Exception as e:
         import traceback
@@ -314,7 +321,14 @@ def calculate_synastry(req: SynastryRequest):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/reference-tables")
+def get_reference_tables():
+    """Returns standardized Thai & Western astrological reference tables (Zodiac Signs & Dignities, Planetary Pairs, Thaksa Roles)."""
+    return {
+        "success": True,
+        "tables": get_astrology_reference_tables()
+    }
 
 
 @app.post("/api/chart/export-pdf")
@@ -332,7 +346,8 @@ def export_pdf(req: ChartRequest):
             house_system="P"
         )
         sunrise_time = chart["metadata"]["sunrise_local"]
-        day_res = determine_astrological_day(req.birth_date, req.birth_time, sunrise_time)
+        sunset_time = chart["metadata"].get("sunset_local", "18:00:00")
+        day_res = determine_astrological_day(req.birth_date, req.birth_time, sunrise_time, sunset_time)
         matrix = calculate_thaksa_matrix(day_res["thaksa_num"])
         timeline = calculate_108_timeline(req.birth_date, day_res["thaksa_num"], chart["planets_dict"])
         trinity = analyze_natal_chart(chart, matrix)
@@ -799,7 +814,8 @@ def generate_ai_reading(
     cp = req.chart_params
     chart = calculate_chart(cp.birth_date, cp.birth_time, cp.latitude, cp.longitude, cp.tz_offset, "P")
     sunrise_time = chart["metadata"]["sunrise_local"]
-    day_res = determine_astrological_day(cp.birth_date, cp.birth_time, sunrise_time)
+    sunset_time = chart["metadata"].get("sunset_local", "18:00:00")
+    day_res = determine_astrological_day(cp.birth_date, cp.birth_time, sunrise_time, sunset_time)
     matrix = calculate_thaksa_matrix(day_res["thaksa_num"])
     timeline = calculate_108_timeline(cp.birth_date, day_res["thaksa_num"], chart["planets_dict"])
     trinity = analyze_natal_chart(chart, matrix)
@@ -885,7 +901,8 @@ def chat_ai_counselor(
     cp = req.chart_params
     chart = calculate_chart(cp.birth_date, cp.birth_time, cp.latitude, cp.longitude, cp.tz_offset, "P")
     sunrise_time = chart["metadata"]["sunrise_local"]
-    day_res = determine_astrological_day(cp.birth_date, cp.birth_time, sunrise_time)
+    sunset_time = chart["metadata"].get("sunset_local", "18:00:00")
+    day_res = determine_astrological_day(cp.birth_date, cp.birth_time, sunrise_time, sunset_time)
     matrix = calculate_thaksa_matrix(day_res["thaksa_num"])
     timeline = calculate_108_timeline(cp.birth_date, day_res["thaksa_num"], chart["planets_dict"])
     trinity = analyze_natal_chart(chart, matrix)

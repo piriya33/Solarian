@@ -537,6 +537,84 @@ export interface PracticalGuidance {
   periods: Record<GuidancePeriodKey, GuidanceCard>;
 }
 
+export interface ZodiacSignRef {
+  id: number;
+  sign_en: string;
+  sign_thai: string;
+  symbol: string;
+  element: string;
+  element_color: string;
+  modality: string;
+  modality_desc: string;
+  traditional_ruler: {
+    num: number;
+    name: string;
+    thai: string;
+    symbol: string;
+  };
+  modern_ruler?: {
+    name: string;
+    thai: string;
+    symbol: string;
+  } | null;
+  exaltation?: {
+    num: number;
+    name: string;
+    thai: string;
+    degree?: string;
+    level: string;
+  } | null;
+  detriment?: {
+    num: number;
+    name: string;
+    thai: string;
+    level: string;
+  } | null;
+  fall?: {
+    num: number;
+    name: string;
+    thai: string;
+    level: string;
+  } | null;
+  keywords: string;
+}
+
+export interface PlanetaryPairRef {
+  planets: number[];
+  names_thai: string;
+  type: string;
+  meaning: string;
+  action: string;
+}
+
+export interface PlanetaryPairGroup {
+  title: string;
+  theme: string;
+  verse: string;
+  pairs: PlanetaryPairRef[];
+}
+
+export interface PlanetaryPairsCatalog {
+  friends: PlanetaryPairGroup;
+  enemies: PlanetaryPairGroup;
+  sompol: PlanetaryPairGroup;
+  elements: PlanetaryPairGroup;
+}
+
+export interface ThaksaRoleRef {
+  index: number;
+  key: string;
+  thai: string;
+  desc: string;
+  detail: string;
+}
+
+export interface ReferenceTablesData {
+  zodiac_signs: ZodiacSignRef[];
+  planetary_pairs: PlanetaryPairsCatalog;
+  thaksa_roles: ThaksaRoleRef[];
+}
+
 export interface ApiResponse {
   success: boolean;
   profile: {
@@ -551,6 +629,13 @@ export interface ApiResponse {
     day_name: string;
     period_years: number;
     is_before_sunrise: boolean;
+    is_rahu_night?: boolean;
+    civil_weekday_thai?: string;
+    astro_day_thai?: string;
+    civil_date?: string;
+    effective_date?: string;
+    sunrise_time?: string;
+    sunset_time?: string;
     reason: string;
   };
   thaksa_matrix: ThaksaRole[];
@@ -560,6 +645,7 @@ export interface ApiResponse {
   aspect_dynamics: AspectDynamic[];
   guidance?: PracticalGuidance;
   bazi?: BaziResult;
+  reference_tables?: ReferenceTablesData;
 }
 
 export interface CrossAspect {
